@@ -14,28 +14,16 @@
 
 namespace ui
 {
-
-namespace pango
-{
-class context_t;
-}
-
 namespace cairo
 {
 
-/*
- * TODO refactor cairo_window_t to remove the pango font stuff.
- *
- * Really should have a top level ui::window_t that combines the x11, cairo and pango stuff
- */
 class cairo_window_t : public x11::window_t
 {
 protected:
 	cairo_surface_t* cs = nullptr;
 	cairo_t* cr = nullptr;
-	std::unique_ptr<pango::context_t> context;
 
-	virtual void _draw(cairo_t* cr);
+	virtual void _draw(cairo_t* cr) =0;
 public:
 
 	struct error : public std::runtime_error

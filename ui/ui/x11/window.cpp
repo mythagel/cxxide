@@ -22,8 +22,8 @@ window_t::window_t(display_t& display, const rectangle_t<int>& rect)
 	if(!window)
 		throw error("Unable to create window");
 
-//	Atom wm_delete_window = display.get_atom("WM_DELETE_WINDOW");
-//	XSetWMProtocols(*display, window, &wm_delete_window, 1);
+	Atom wm_delete_window = display.get_atom("WM_DELETE_WINDOW");
+	XSetWMProtocols(*display, window, &wm_delete_window, 1);
 
 	display.register_window(this);
 }
@@ -37,6 +37,11 @@ window_t::window_t(window_t& parent, const rectangle_t<int>& rect)
 		throw error("Unable to create child window");
 
 	display.register_window(this);
+}
+
+void window_t::select_events(long events)
+{
+	XSelectInput(*display, window, events);
 }
 
 void window_t::map() const

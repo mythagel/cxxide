@@ -39,6 +39,8 @@ public:
 	window_t(const window_t&) = delete;
 	window_t& operator=(const window_t&) = delete;
 
+	void select_events(long events);
+
 	void map() const;
 	void unmap() const;
 
