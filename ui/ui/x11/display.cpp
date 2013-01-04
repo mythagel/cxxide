@@ -79,7 +79,7 @@ void display_t::run_display_event_loop()
 					if (xevent_next.type == KeyPress && xevent_next.xkey.time == xkey.time && xevent_next.xkey.keycode == xkey.keycode)
 					{
 						key_event.type = key_event_t::Repeat;
-						// Consume the next event
+						// Consume the event
 						XNextEvent(display, &xevent_next);
 					}
 				}
@@ -91,7 +91,7 @@ void display_t::run_display_event_loop()
 				if(xkey.state & ControlMask)
 					key_event.mask |= key_event_t::Control;
 
-				key_event.key = wchar2utf8(XkbKeycodeToKeysym(display, xkey.keycode, 0, 0));
+				key_event.key = wchar2utf8(keysym2ucs(XkbKeycodeToKeysym(display, xkey.keycode, 0, 0)));
 
 				window->on_key_event(key_event);
 				break;
@@ -104,6 +104,7 @@ void display_t::run_display_event_loop()
 				mouse_event_t mouse_event;
 				mouse_event.type = xbutton.type == ButtonPress ? mouse_event_t::Down : mouse_event_t::Up;
 
+				mouse_event.button = xbutton.button;
 				mouse_event.position.x = xbutton.x;
 				mouse_event.position.y = xbutton.y;
 

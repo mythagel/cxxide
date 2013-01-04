@@ -24,13 +24,13 @@ public:
 		switch(key_event.type)
 		{
 			case key_event_t::Down:
-				fprintf(stderr, "Key Down\n");
+				fprintf(stderr, "Key Down: %s\n", key_event.key.c_str());
 				break;
 			case key_event_t::Up:
-				fprintf(stderr, "Key Up\n");
+				fprintf(stderr, "Key Up: %s\n", key_event.key.c_str());
 				break;
 			case key_event_t::Repeat:
-				fprintf(stderr, "Key Repeat\n");
+				fprintf(stderr, "Key Repeat: %s\n", key_event.key.c_str());
 				break;
 		}
 	}
@@ -42,10 +42,10 @@ public:
 		switch(mouse_event.type)
 		{
 			case mouse_event_t::Down:
-				fprintf(stderr, "Mouse Down\n");
+				fprintf(stderr, "Mouse Down, Button: %d\n", mouse_event.button);
 				break;
 			case mouse_event_t::Up:
-				fprintf(stderr, "Mouse Up\n");
+				fprintf(stderr, "Mouse Up, Button: %d\n", mouse_event.button);
 				break;
 			case mouse_event_t::Move:
 				fprintf(stderr, "Mouse Move %dx%d\n", mouse_event.position.x, mouse_event.position.y);
