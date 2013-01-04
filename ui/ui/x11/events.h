@@ -20,7 +20,8 @@ struct key_event_t
 	enum
 	{
 		Down,
-		Up
+		Up,
+		Repeat
 	} type = Up;
 	enum
 	{

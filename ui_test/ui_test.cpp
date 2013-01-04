@@ -29,6 +29,9 @@ public:
 			case key_event_t::Up:
 				fprintf(stderr, "Key Up\n");
 				break;
+			case key_event_t::Repeat:
+				fprintf(stderr, "Key Repeat\n");
+				break;
 		}
 	}
 	virtual void on_mouse_event(const ui::x11::mouse_event_t& mouse_event)

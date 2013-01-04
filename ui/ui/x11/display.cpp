@@ -70,6 +70,20 @@ void display_t::run_display_event_loop()
 
 				key_event_t key_event;
 				key_event.type = xkey.type == KeyPress ? key_event_t::Down : key_event_t::Up;
+
+				if(xevent.type == KeyRelease && XEventsQueued(display, QueuedAfterReading))
+				{
+					XEvent xevent_next;
+					XPeekEvent(display, &xevent_next);
+
+					if (xevent_next.type == KeyPress && xevent_next.xkey.time == xkey.time && xevent_next.xkey.keycode == xkey.keycode)
+					{
+						key_event.type = key_event_t::Repeat;
+						// Consume the next event
+						XNextEvent(display, &xevent_next);
+					}
+				}
+
 				if(xkey.state & ShiftMask)
 					key_event.mask |= key_event_t::Shift;
 				if(xkey.state & LockMask)
