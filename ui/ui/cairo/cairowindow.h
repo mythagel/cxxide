@@ -23,6 +23,11 @@ class context_t;
 namespace cairo
 {
 
+/*
+ * TODO refactor cairo_window_t to remove the pango font stuff.
+ *
+ * Really should have a top level ui::window_t that combines the x11, cairo and pango stuff
+ */
 class cairo_window_t : public x11::window_t
 {
 protected:
