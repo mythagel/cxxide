@@ -13,6 +13,9 @@ int main()
 	using namespace ui::x11;
 	using namespace ui::cairo;
 
+	/*
+	 * Initialise connection to X11
+	 */
 	display_t display{getenv("DISPLAY")};
 
 	cairo_window_t window{display, rectangle_t<int>{0, 0, 1024, 576}};
@@ -20,9 +23,6 @@ int main()
 	window.map();
 
 	display.run_display_event_loop();
-
-//	XFlush(*display);
-//	sleep(5);
 
 	return 0;
 }
