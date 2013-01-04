@@ -9,8 +9,8 @@
 #define UICAIROCAIROWINDOW_H_
 #include "../x11/window.h"
 #include <stdexcept>
-#include <cairo.h>
 #include <memory>
+#include "cairo_fwd.h"
 
 namespace ui
 {

@@ -7,6 +7,7 @@
 
 #include "cairowindow.h"
 #include "../x11/display.h"
+#include <cairo.h>
 #include <cairo/cairo-xlib.h>
 #include "../make_unique.h"
 #include "../pango/context.h"
