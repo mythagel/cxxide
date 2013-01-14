@@ -1,4 +1,4 @@
 cxxide
 ======
 
-Custom C++ Development Environment
+Experimental Custom C++ Development Environment
