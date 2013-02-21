@@ -43,7 +43,7 @@ public:
 		}
 	};
 
-	static void Parse(std::istream& is, listfile_t* list);
+	static void Parse(std::istream& is, listfile_t& list);
 
 	std::string str() const;
 	std::string describe() const;

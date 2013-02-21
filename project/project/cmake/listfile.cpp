@@ -52,13 +52,13 @@ void listfile_t::ParseWhitespace(std::istream_iterator<char>& it, const std::ist
 		}
 	}
 
-	throw error("Whitespace parse failure");
+	throw error("ParseWhitespace: parse failure");
 }
 
 void listfile_t::ParseComment(std::istream_iterator<char>& it, const std::istream_iterator<char>& end, comment_t* comment)
 {
 	if(*it != '#')
-		throw error("Comment parse failure");
+		throw error("ParseComment: Comment must start with '#'");
 
 	++it;
 	while(it != end && *it != '\n')
@@ -70,14 +70,17 @@ void listfile_t::ParseComment(std::istream_iterator<char>& it, const std::istrea
 void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istream_iterator<char>& end, command_t* command)
 {
 	std::string name;
+	if(!isalpha(*it))
+		throw error("ParseCommand: expected alpha.");
+
 	name += *it++;
-	while(it != end && (isalpha(*it) || *it == '_'))
+	while(it != end && (isalpha(*it) || isdigit(*it) || *it == '_'))
 		name += *it++;
 
 	command->name = name;
 
 	if(it == end)
-		throw error("eof");
+		throw error("ParseCommand: eof; expected ws / ( / cmt / arg");
 
 	while(it != end)
 	{
@@ -99,7 +102,7 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 				continue;
 			}
 			default:
-				throw error("invalid character");
+				throw error("ParseCommand: invalid character; expected ws / (");
 		}
 
 		++it;
@@ -108,7 +111,10 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 	while(it != end)
 	{
 		if(*it == ')')
+		{
+			++it;
 			break;
+		}
 
 		switch(*it)
 		{
@@ -130,12 +136,20 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 			}
 		}
 
-		if(isalnum(*it) || *it == '"' || *it == '_' || *it == '-' || *it == '(' || *it == '.' || *it == '[' || *it == '@' || *it == '$' || *it == '/' || *it == '\\')
+		if(isalnum(*it) || *it == '<' || *it == '>' || *it == '*' || *it == '"' || *it == '_' || *it == '-' || *it == '(' || *it == '.' || *it == '[' || *it == '@' || *it == '$' || *it == '/' || *it == '\\')
 		{
 			argument_t* argument = new argument_t;
 			ParseArgument(it, end, argument);
 			command->items.emplace_back(argument);
 			continue;
+		}
+		else
+		{
+			std::string ex = "ParseCommand: Unexpected character: ";
+			ex += *it;
+			ex += '\n';
+			ex += command->describe();
+			throw error(ex);
 		}
 
 		++it;
@@ -149,14 +163,19 @@ void listfile_t::ParseArgument(std::istream_iterator<char>& it, const std::istre
 	{
 		++it;
 		argument->quoted = true;
+		bool escape(false);
 		while(it != end)
 		{
-			if(*it == '"')
+			if(*it == '"' && !escape)
 			{
 				++it;
-				// TODO escaped quotes
 				break;
 			}
+
+			if(*it == '\\' && !escape)
+				escape = true;
+			else
+				escape = false;
 			argument->value += *it++;
 		}
 		return;
@@ -239,11 +258,11 @@ void listfile_t::ParseArgument(std::istream_iterator<char>& it, const std::istre
 	throw error("argument");
 }
 
-void listfile_t::Parse(std::istream& is, listfile_t* list)
+void listfile_t::Parse(std::istream& is, listfile_t& list)
 {
 	std::noskipws(is);
-	std::istream_iterator<char> end; // end-of-stream iterator
-	std::istream_iterator<char> it(is); // stdin iterator
+	std::istream_iterator<char> it(is);
+	const std::istream_iterator<char> end;
 
 	while(it != end)
 	{
@@ -255,14 +274,14 @@ void listfile_t::Parse(std::istream& is, listfile_t* list)
 			{
 				whitespace_t* whitespace = new whitespace_t;
 				ParseWhitespace(it, end, whitespace);
-				list->items.emplace_back(whitespace);
+				list.items.emplace_back(whitespace);
 				continue;
 			}
 			case '#':
 			{
 				comment_t* comment = new comment_t;
 				ParseComment(it, end, comment);
-				list->items.emplace_back(comment);
+				list.items.emplace_back(comment);
 				continue;
 			}
 		}
@@ -271,8 +290,14 @@ void listfile_t::Parse(std::istream& is, listfile_t* list)
 		{
 			command_t* command = new command_t;
 			ParseCommand(it, end, command);
-			list->items.emplace_back(command);
+			list.items.emplace_back(command);
 			continue;
+		}
+		else
+		{
+			std::string ex = "Parse: Unexpected character: ";
+			ex += *it;
+			throw error(ex);
 		}
 
 		++it;
