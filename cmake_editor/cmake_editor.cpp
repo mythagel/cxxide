@@ -12,7 +12,7 @@
 int main(int argc, char* argv[])
 {
 	using namespace project::cmake;
-	assert(argc == 2);
+	assert(argc > 1);
 
 	std::cout << argv[1] << "------------------------------------------\n";
 	std::ifstream ifs(argv[1]);

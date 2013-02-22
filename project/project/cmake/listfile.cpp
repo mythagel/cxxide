@@ -39,6 +39,7 @@ void listfile_t::ParseWhitespace(std::istream_iterator<char>& it, const std::ist
 	{
 		case ' ':
 		case '\t':
+		case '\r':
 		case '\n':
 		{
 			whitespace->ws_char = *it++;
@@ -178,6 +179,8 @@ void listfile_t::ParseArgument(std::istream_iterator<char>& it, const std::istre
 				escape = false;
 			argument->value += *it++;
 		}
+		if(escape)
+			throw error("ParseArgument: Unclosed quoted string.");
 		return;
 	}
 
@@ -270,6 +273,7 @@ void listfile_t::Parse(std::istream& is, listfile_t& list)
 		{
 			case ' ':
 			case '\t':
+			case '\r':
 			case '\n':
 			{
 				whitespace_t* whitespace = new whitespace_t;
