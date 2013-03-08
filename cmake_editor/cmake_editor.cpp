@@ -9,6 +9,45 @@
 #include <iostream>
 #include <cassert>
 
+#include <vector>
+#include <tuple>
+namespace cmake
+{
+struct ws_t
+{
+	static bool ws_p(char c)
+	{
+		switch(c)
+		{
+			case '\t':
+			case '\n':
+			case '\r':
+			case ' ':
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	template <typename It>
+	static bool parse(It& it, const It& end, std::string* ws)
+	{
+		if(it == end)
+			return false;
+		if(!ws_p(*it))
+			return false;
+
+		It begin = it;
+		while(it != end && ws_p(*it++))
+			;
+		ws->assign(begin, it);
+		return true;
+	}
+};
+
+
+}
+
 int main(int argc, char* argv[])
 {
 	using namespace project::cmake;
