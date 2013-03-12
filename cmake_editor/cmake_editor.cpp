@@ -38,6 +38,10 @@ struct variable_t
 		if(*it != '$')
 			return false;
 		++it;
+
+		if(it == end)
+			throw parse_error("variable: unexpected eof");
+
 		if(*it != '(')
 			throw parse_error("variable");
 		++it;
@@ -67,6 +71,53 @@ struct variable_t
 	}
 };
 
+// unquoted-argument  = (variable / arg_p / escape-char )
+// *(variable / arg_p / escape-char /
+//   DQUOTE *( variable / argq_p / escape-char ) DQUOTE)
+
+struct unquoted_argument_t
+{
+	static bool arg_p(char c)
+	{
+		switch(c)
+		{
+			case '\t':
+			case '\n':
+			case '\r':
+			case ' ':
+			case '"':
+			case '#':
+			case '(':
+			case ')':
+			case '\\':
+				return false;
+			default:
+				return true;
+		}
+	}
+	static bool argq_p(char c)
+	{
+		switch(c)
+		{
+			case '\n':
+			case '\r':
+			case '"':
+			case '#':
+			case '(':
+			case ')':
+			case '\\':
+				return false;
+			default:
+				return true;
+		}
+	}
+
+	template <typename It>
+	static bool parse(It& it, const It& end, unquoted_argument_t* unq)
+	{
+		return false;
+	}
+};
 
 }
 
