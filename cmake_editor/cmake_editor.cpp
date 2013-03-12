@@ -11,37 +11,59 @@
 
 #include <vector>
 #include <tuple>
+#include <cctype>
+#include <sstream>
+
 namespace cmake
 {
-struct ws_t
+struct parse_error
 {
-	static bool ws_p(char c)
+	parse_error(const char*)
 	{
-		switch(c)
-		{
-			case '\t':
-			case '\n':
-			case '\r':
-			case ' ':
-				return true;
-			default:
-				return false;
-		}
+	}
+};
+
+struct variable_t
+{
+	std::string variable;
+
+	static bool var_p(char c)
+	{
+		return isalnum(c) || c == '_';
 	}
 
 	template <typename It>
-	static bool parse(It& it, const It& end, std::string* ws)
+	static bool parse(It& it, const It& end, variable_t* var)
 	{
+		if(*it != '$')
+			return false;
+		++it;
+		if(*it != '(')
+			throw parse_error("variable");
+		++it;
+
 		if(it == end)
-			return false;
-		if(!ws_p(*it))
-			return false;
+			throw parse_error("variable: unexpected eof");
 
 		It begin = it;
-		while(it != end && ws_p(*it++))
-			;
-		ws->assign(begin, it);
+		while(it != end && var_p(*it))
+			++it;
+
+		if(it == end)
+			throw parse_error("variable: unexpected eof");
+		if(*it != ')')
+			throw parse_error("variable");
+
+		var->variable.assign(begin, it);
+		++it;
 		return true;
+	}
+
+	std::string str() const
+	{
+		std::ostringstream s;
+		s << "$(" << variable << ")";
+		return s.str();
 	}
 };
 
@@ -50,6 +72,15 @@ struct ws_t
 
 int main(int argc, char* argv[])
 {
+	{
+		using namespace cmake;
+
+		char* c;
+		char* end;
+		variable_t var;
+		variable_t::parse(c, end, &var);
+	}
+
 	using namespace project::cmake;
 	assert(argc > 1);
 
