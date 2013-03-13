@@ -13,6 +13,7 @@
 #include <istream>
 #include <iterator>
 #include <iostream>
+#include <fstream>
 
 template<typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args)
@@ -51,6 +52,7 @@ protected:
 public:
 
 	virtual std::string str() const =0;
+	virtual std::string describe() const =0;
 	virtual ~list_item() = default;
 };
 
@@ -70,6 +72,13 @@ struct raw_string_t : list_item
 	std::string str() const
 	{
 		return s;
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "raw_string{" << str() << "}";
+		return s.str();
 	}
 };
 
@@ -112,6 +121,14 @@ struct whitespace_t : list_item
 	{
 		return wsp;
 	}
+
+	std::string describe() const
+	{
+		return str();
+		std::ostringstream s;
+		s << "ws{" << str() << "}";
+		return s.str();
+	}
 };
 
 struct comment_t : list_item
@@ -129,10 +146,10 @@ struct comment_t : list_item
 		if(*it != '#')
 			return false;
 
-		It begin = ++it;
+		++it;
+		cmt->cmt.clear();
 		while(it != end && *it != '\n')
-			++it;
-		cmt->cmt.assign(begin, it);
+			cmt->cmt += *it++;
 		return true;
 	}
 
@@ -140,6 +157,13 @@ struct comment_t : list_item
 	{
 		std::ostringstream s;
 		s << '#' << cmt;
+		return s.str();
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "cmt{" << str() << "}";
 		return s.str();
 	}
 };
@@ -176,6 +200,13 @@ struct identifier_t : list_item
 	{
 		return ident;
 	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "ident{" << str() << "}";
+		return s.str();
+	}
 };
 
 struct string_t : list_item
@@ -193,13 +224,15 @@ struct string_t : list_item
 		if(*it != '"')
 			return false;
 
-		It begin = it;
+		str->s.clear();
+		++it;
 		bool last_escape(false);
 		while(it != end)
 		{
 			if(*it == '"' && !last_escape)
 				break;
 			last_escape = (*it == '\\');
+			str->s += *it++;
 		}
 
 		if(it == end)
@@ -207,7 +240,6 @@ struct string_t : list_item
 		if(*it != '"')
 			throw parse_error("string: expected '\"'");
 
-		str->s.assign(begin, it);
 		++it;
 		return true;
 	}
@@ -217,6 +249,13 @@ struct string_t : list_item
 		std::ostringstream ss;
 		ss << '"' << s << '"';
 		return ss.str();
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "str{" << str() << "}";
+		return s.str();
 	}
 };
 
@@ -251,6 +290,7 @@ struct variable_t : list_item
 	template <typename It>
 	static bool parse(It& it, const It& end, variable_t* var)
 	{
+		It begin = it;
 		if(*it != '$')
 			return false;
 		++it;
@@ -259,23 +299,25 @@ struct variable_t : list_item
 			throw parse_error("variable: unexpected eof");
 
 		if(*it != '(')
-			throw parse_error("variable: expected '('");
+		{
+			it = begin;
+			return false;
+		}
 		++it;
 
 		if(it == end)
 			throw parse_error("variable: unexpected eof");
 
-		It begin = it;
+		var->var.clear();
 		while(it != end && var_p(*it))
-			++it;
+			var->var += *it++;
 
 		if(it == end)
 			throw parse_error("variable: unexpected eof; expected ')'");
 		if(*it != ')')
 			throw parse_error("variable: expected ')'");
-
-		var->var.assign(begin, it);
 		++it;
+
 		return true;
 	}
 
@@ -283,6 +325,13 @@ struct variable_t : list_item
 	{
 		std::ostringstream s;
 		s << "$(" << var << ")";
+		return s.str();
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "var{" << str() << "}";
 		return s.str();
 	}
 };
@@ -376,6 +425,13 @@ struct quoted_t : list_item
 		for(auto& part : parts)
 			s << part->str();
 		s << '"';
+		return s.str();
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "quot{" << str() << "}";
 		return s.str();
 	}
 };
@@ -487,6 +543,13 @@ struct unquoted_argument_t : list_item
 			s << part->str();
 		return s.str();
 	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "unq{" << str() << "}";
+		return s.str();
+	}
 };
 
 struct bracketed_args_t : list_item
@@ -556,6 +619,13 @@ struct bracketed_args_t : list_item
 		for(auto& arg : args)
 			s << arg->str();
 		s << ')';
+		return s.str();
+	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "bracketed{" << str() << "}";
 		return s.str();
 	}
 };
@@ -670,6 +740,21 @@ struct command_t : list_item
 		s << ')';
 		return s.str();
 	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		s << "cmd{";
+		s << name.describe();
+		for(auto& wsp : name_wsp)
+			s << wsp->describe();
+		s << '(';
+		for(auto& arg : args)
+			s << arg->describe();
+		s << ')';
+		s << "}";
+		return s.str();
+	}
 };
 
 struct list_file_t
@@ -702,7 +787,7 @@ struct list_file_t
 				throw parse_error("top-level");
 			}
 		}
-		return false;
+		return true;
 	}
 
 	std::string str() const
@@ -712,12 +797,33 @@ struct list_file_t
 			s << item->str();
 		return s.str();
 	}
+
+	std::string describe() const
+	{
+		std::ostringstream s;
+		for(auto& item : items)
+			s << item->describe();
+		return s.str();
+	}
 };
 
-int main()
+int main(int argc, char* argv[])
 {
-	std::noskipws(std::cin);
-	std::istream_iterator<char> it(std::cin);
+	std::ifstream ifs;
+
+	std::istream* is = &std::cin;
+
+	if(argc > 1)
+	{
+		std::cout << "------ " << argv[1] << " ------\n";
+		ifs.open(argv[1], std::ios::in | std::ios::binary);
+		if(!ifs)
+			return 1;
+		is = &ifs;
+	}
+
+	std::noskipws(*is);
+	std::istream_iterator<char> it(*is);
 	const std::istream_iterator<char> end;
 
 	list_file_t lst;
@@ -726,15 +832,17 @@ int main()
 		if(list_file_t::parse(it, end, &lst))
 		{
 			std::cout << lst.str();
+			return 0;
 		}
 		else
 		{
+			std::cout << lst.describe();
 			return 1;
 		}
 	}
 	catch(const parse_error& ex)
 	{
-		std::cout << lst.str();
+		std::cout << lst.describe();
 		throw;
 	}
 	return 0;
