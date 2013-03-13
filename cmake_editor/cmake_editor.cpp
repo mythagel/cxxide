@@ -10,6 +10,9 @@
 #include <stdexcept>
 #include <vector>
 #include <memory>
+#include <istream>
+#include <iterator>
+#include <iostream>
 
 template<typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args)
@@ -34,7 +37,11 @@ struct list_item
 		identifier,
 		command,
 		string,
-		unquoted
+		variable,
+		unquoted,
+		quoted,
+		raw_string,
+		bracketed
 	} type;
 protected:
 	list_item(Type type)
@@ -45,6 +52,25 @@ public:
 
 	virtual std::string str() const =0;
 	virtual ~list_item() = default;
+};
+
+struct raw_string_t : list_item
+{
+	std::string s;
+
+	raw_string_t()
+	 : list_item(Type::raw_string)
+	{
+	}
+	raw_string_t(const std::string& s)
+	 : list_item(Type::raw_string), s(s)
+	{
+	}
+
+	std::string str() const
+	{
+		return s;
+	}
 };
 
 struct whitespace_t : list_item
@@ -76,10 +102,9 @@ struct whitespace_t : list_item
 		if(!ws_p(*it))
 			return false;
 
-		It begin = it;
+		wsp->wsp.clear();
 		while(it != end && ws_p(*it))
-			++it;
-		wsp->wsp.assign(begin, it);
+			wsp->wsp += *it++;
 		return true;
 	}
 
@@ -139,14 +164,11 @@ struct identifier_t : list_item
 		if(!(isalpha(*it) || *it == '_'))
 			return false;
 
-		It begin = it;
+		ident->ident.clear();
+
 		while(it != end && ident_p(*it))
-			++it;
+			ident->ident += *it++;
 
-		if(it == end)
-			throw parse_error("identifier");
-
-		ident->ident.assign(begin, it);
 		return true;
 	}
 
@@ -181,9 +203,9 @@ struct string_t : list_item
 		}
 
 		if(it == end)
-			throw parse_error("string");
+			throw parse_error("string: unexpected eof; expected '\"'");
 		if(*it != '"')
-			throw parse_error("string");
+			throw parse_error("string: expected '\"'");
 
 		str->s.assign(begin, it);
 		++it;
@@ -206,15 +228,20 @@ bool escape_char_p(It& it, const It& end, std::string* escp)
 	It begin = it;
 	++it;
 	if(it == end)
-		throw parse_error("escape_char");
+		throw parse_error("escape_char: Expected [char]");
 	++it;
 	escp->assign(begin, it);
 	return true;
 }
 
-struct variable_t
+struct variable_t : list_item
 {
 	std::string var;
+
+	variable_t()
+	 : list_item(Type::variable)
+	{
+	}
 
 	static bool var_p(char c)
 	{
@@ -232,7 +259,7 @@ struct variable_t
 			throw parse_error("variable: unexpected eof");
 
 		if(*it != '(')
-			throw parse_error("variable");
+			throw parse_error("variable: expected '('");
 		++it;
 
 		if(it == end)
@@ -243,9 +270,9 @@ struct variable_t
 			++it;
 
 		if(it == end)
-			throw parse_error("variable: unexpected eof");
+			throw parse_error("variable: unexpected eof; expected ')'");
 		if(*it != ')')
-			throw parse_error("variable");
+			throw parse_error("variable: expected ')'");
 
 		var->var.assign(begin, it);
 		++it;
@@ -260,10 +287,14 @@ struct variable_t
 	}
 };
 
-struct unquoted_part_t;
-struct quoted_t
+struct quoted_t : list_item
 {
-	std::vector<unquoted_part_t> parts;
+	std::vector<std::shared_ptr<list_item> > parts;
+
+	quoted_t()
+	 : list_item(Type::quoted)
+	{
+	}
 
 	static bool argq_p(char c)
 	{
@@ -283,110 +314,75 @@ struct quoted_t
 	}
 
 	template <typename It>
-	static bool parse(It& it, const It& end, quoted_t* quot);
+	static bool parse(It& it, const It& end, quoted_t* quot)
+	{
+		if(*it != '"')
+			return false;
+		++it;
 
-	std::string str() const;
-};
+		quot->parts.clear();
 
-struct unquoted_part_t
-{
-	enum class Type
-	{
-		variable,
-		string,
-		quoted
-	} type;
-	variable_t var;
-	std::string strng;
-	quoted_t quot;
+		variable_t var;
+		std::string escp;
 
-	unquoted_part_t(const variable_t& var)
-	 : type(Type::variable), var(var)
-	{
-	}
-	unquoted_part_t(const std::string& strng)
-	 : type(Type::string), strng(strng)
-	{
-	}
-	unquoted_part_t(const quoted_t& quot)
-	 : type(Type::quoted), quot(quot)
-	{
+		while(it != end)
+		{
+			if(variable_t::parse(it, end, &var))
+			{
+				quot->parts.emplace_back(std::make_shared<variable_t>(var));
+			}
+			else if(argq_p(*it))
+			{
+				if(quot->parts.empty() || quot->parts.back()->type != Type::raw_string)
+				{
+					quot->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *it)));
+				}
+				else
+				{
+					auto strng = std::dynamic_pointer_cast<raw_string_t>(quot->parts.back());
+					strng->s += *it;
+				}
+				++it;
+			}
+			else if(escape_char_p(it, end, &escp))
+			{
+				if(quot->parts.empty() || quot->parts.back()->type != Type::raw_string)
+				{
+					quot->parts.emplace_back(std::make_shared<raw_string_t>(escp));
+				}
+				else
+				{
+					auto strng = std::dynamic_pointer_cast<raw_string_t>(quot->parts.back());
+					strng->s += escp;
+				}
+			}
+			else if(*it == '"')
+			{
+				++it;
+				return true;
+			}
+			else
+			{
+				throw parse_error("quoted: unexpected char");
+			}
+		}
+		throw parse_error("quoted: unexpected eof; expected '\"'");
 	}
 
 	std::string str() const
 	{
-		switch(type)
-		{
-			case Type::variable:
-				return var.str();
-			case Type::string:
-				return strng;
-			case Type::quoted:
-				return quot.str();
-		}
-		throw std::logic_error("unknown type");
+		std::ostringstream s;
+		s << '"';
+		for(auto& part : parts)
+			s << part->str();
+		s << '"';
+		return s.str();
 	}
 };
 
-template <typename It>
-bool quoted_t::parse(It& it, const It& end, quoted_t* quot)
-{
-	if(*it != '"')
-		return false;
-	++it;
-
-	quot->parts.clear();
-
-	variable_t var;
-	std::string escp;
-
-	while(it != end)
-	{
-		if(variable_t::parse(it, end, &var))
-		{
-			quot->parts.emplace_back(var);
-		}
-		else if(argq_p(*it))
-		{
-			if(quot->parts.empty() || quot->parts.back().type != unquoted_part_t::Type::string)
-				quot->parts.emplace_back(std::string(1, *it));
-			else
-				quot->parts.back().strng += *it;
-			++it;
-		}
-		else if(escape_char_p(it, end, &escp))
-		{
-			if(quot->parts.empty() || quot->parts.back().type != unquoted_part_t::Type::string)
-				quot->parts.emplace_back(escp);
-			else
-				quot->parts.back().strng += escp;
-		}
-		else if(*it == '"')
-		{
-			++it;
-			return true;
-		}
-		else
-		{
-			throw parse_error("unexpected char");
-		}
-	}
-	throw parse_error("unexpected eof");
-}
-
-std::string quoted_t::str() const
-{
-	std::ostringstream s;
-	s << '"';
-	for(auto& part : parts)
-		s << part.str();
-	s << '"';
-	return s.str();
-}
-
 struct unquoted_argument_t : list_item
 {
-	std::vector<unquoted_part_t> parts;
+	std::vector<std::shared_ptr<list_item> > parts;
 
 	unquoted_argument_t()
 	 : list_item(Type::unquoted)
@@ -422,47 +418,58 @@ struct unquoted_argument_t : list_item
 
 		if(variable_t::parse(it, end, &var))
 		{
-			unq->parts.emplace_back(var);
+			unq->parts.emplace_back(std::make_shared<variable_t>(var));
 		}
 		else if(arg_p(*it))
 		{
-			unq->parts.emplace_back(std::string(1, *it));
+			unq->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *it)));
 			++it;
 		}
 		else if(escape_char_p(it, end, &escp))
 		{
-			unq->parts.emplace_back(escp);
+			unq->parts.emplace_back(std::make_shared<raw_string_t>(escp));
 		}
 		else
 		{
 			return false;
 		}
 
-		quoted_t quot;
 		while(it != end)
 		{
+			quoted_t quot;
+
 			if(variable_t::parse(it, end, &var))
 			{
-				unq->parts.emplace_back(var);
+				unq->parts.emplace_back(std::make_shared<variable_t>(var));
 			}
 			else if(arg_p(*it))
 			{
-				if(unq->parts.empty() || unq->parts.back().type != unquoted_part_t::Type::string)
-					unq->parts.emplace_back(std::string(1, *it));
+				if(unq->parts.empty() || unq->parts.back()->type != Type::raw_string)
+				{
+					unq->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *it)));
+				}
 				else
-					unq->parts.back().strng += *it;
+				{
+					auto strng = std::dynamic_pointer_cast<raw_string_t>(unq->parts.back());
+					strng->s += *it;
+				}
 				++it;
 			}
 			else if(escape_char_p(it, end, &escp))
 			{
-				if(unq->parts.empty() || unq->parts.back().type != unquoted_part_t::Type::string)
-					unq->parts.emplace_back(escp);
+				if(unq->parts.empty() || unq->parts.back()->type != Type::raw_string)
+				{
+					unq->parts.emplace_back(std::make_shared<raw_string_t>(escp));
+				}
 				else
-					unq->parts.back().strng += escp;
+				{
+					auto strng = std::dynamic_pointer_cast<raw_string_t>(unq->parts.back());
+					strng->s += escp;
+				}
 			}
 			else if(quoted_t::parse(it, end, &quot))
 			{
-				unq->parts.emplace_back(quot);
+				unq->parts.emplace_back(std::make_shared<quoted_t>(quot));
 			}
 			else
 			{
@@ -476,12 +483,81 @@ struct unquoted_argument_t : list_item
 	std::string str() const
 	{
 		std::ostringstream s;
-		s << '"';
 		for(auto& part : parts)
-			s << part.str();
-		s << '"';
+			s << part->str();
 		return s.str();
-}
+	}
+};
+
+struct bracketed_args_t : list_item
+{
+	std::vector<std::shared_ptr<list_item> > args;
+
+	bracketed_args_t()
+	 : list_item(Type::bracketed)
+	{
+	}
+
+	template <typename It>
+	static bool parse(It& it, const It& end, bracketed_args_t* brac)
+	{
+		if(*it != '(')
+			return false;
+		++it;
+
+		brac->args.clear();
+
+		while(it != end)
+		{
+			whitespace_t wsp;
+			comment_t cmt;
+			string_t str;
+			unquoted_argument_t unq;
+			bracketed_args_t brac_nest;
+
+			if(whitespace_t::parse(it, end, &wsp))
+			{
+				brac->args.emplace_back(std::make_shared<whitespace_t>(wsp));
+			}
+			else if(comment_t::parse(it, end, &cmt))
+			{
+				brac->args.emplace_back(std::make_shared<comment_t>(cmt));
+			}
+			else if(string_t::parse(it, end, &str))
+			{
+				brac->args.emplace_back(std::make_shared<string_t>(str));
+			}
+			else if(unquoted_argument_t::parse(it, end, &unq))
+			{
+				brac->args.emplace_back(std::make_shared<unquoted_argument_t>(unq));
+			}
+			else if(bracketed_args_t::parse(it, end, &brac_nest))
+			{
+				brac->args.emplace_back(std::make_shared<bracketed_args_t>(brac_nest));
+				break;
+			}
+			else if(*it == ')')
+			{
+				++it;
+				return true;
+			}
+			else
+			{
+				throw parse_error("bracketed: expected ')'");
+			}
+		}
+		throw parse_error("bracketed: unexpected eof");
+	}
+
+	std::string str() const
+	{
+		std::ostringstream s;
+		s << '(';
+		for(auto& arg : args)
+			s << arg->str();
+		s << ')';
+		return s.str();
+	}
 };
 
 struct command_t : list_item
@@ -528,7 +604,7 @@ struct command_t : list_item
 			}
 			else
 			{
-				throw parse_error("unexpected char");
+				throw parse_error("command: unexpected char; expected '('");
 			}
 		}
 
@@ -537,14 +613,15 @@ struct command_t : list_item
 
 		if(*it != '(')
 			throw parse_error("command: expected '('");
+		++it;
 
-//		std::size_t bracket_depth(0);
-		while(true)
+		while(it != end)
 		{
 			whitespace_t wsp;
 			comment_t cmt;
 			string_t str;
 			unquoted_argument_t unq;
+			bracketed_args_t brac;
 
 			if(whitespace_t::parse(it, end, &wsp))
 			{
@@ -562,22 +639,23 @@ struct command_t : list_item
 			{
 				cmd->args.emplace_back(std::make_shared<unquoted_argument_t>(unq));
 			}
-			else if(*it == '(') // parse-bracketed
+			else if(bracketed_args_t::parse(it, end, &brac)) // parse-bracketed
 			{
-
+				cmd->args.emplace_back(std::make_shared<bracketed_args_t>(brac));
+				break;
 			}
 			else if(*it == ')')
 			{
 				++it;
-				break;
+				return true;
 			}
 			else
 			{
-				throw parse_error("command");
+				throw parse_error("command: unexpected char");
 			}
 		}
 
-		return true;
+		throw parse_error("command: unexpected eof");
 	}
 
 	std::string str() const
@@ -626,15 +704,40 @@ struct list_file_t
 		}
 		return false;
 	}
+
+	std::string str() const
+	{
+		std::ostringstream s;
+		for(auto& item : items)
+			s << item->str();
+		return s.str();
+	}
 };
 
 int main()
 {
-	char* c;
-	char* end;
+	std::noskipws(std::cin);
+	std::istream_iterator<char> it(std::cin);
+	const std::istream_iterator<char> end;
 
 	list_file_t lst;
-	return list_file_t::parse(c, end, &lst) ? 0 : 1;
+	try
+	{
+		if(list_file_t::parse(it, end, &lst))
+		{
+			std::cout << lst.str();
+		}
+		else
+		{
+			return 1;
+		}
+	}
+	catch(const parse_error& ex)
+	{
+		std::cout << lst.str();
+		throw;
+	}
+	return 0;
 }
 
 

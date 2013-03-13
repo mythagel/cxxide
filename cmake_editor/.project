@@ -3,7 +3,6 @@
 	<name>cmake_editor</name>
 	<comment></comment>
 	<projects>
-		<project>project</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
@@ -31,7 +30,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/cmake_editor/Release}</value>
+					<value>${workspace_loc:/cmake_editor/Debug}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>
