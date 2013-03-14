@@ -111,9 +111,10 @@ struct whitespace_t : list_item
 		if(!ws_p(*it))
 			return false;
 
-		wsp->wsp.clear();
+		auto begin = it;
 		while(it != end && ws_p(*it))
-			wsp->wsp += *it++;
+			++it;
+		wsp->wsp.assign(begin, it);
 		return true;
 	}
 
@@ -147,9 +148,10 @@ struct comment_t : list_item
 			return false;
 
 		++it;
-		cmt->cmt.clear();
+		auto begin = it;
 		while(it != end && *it != '\n')
-			cmt->cmt += *it++;
+			++it;
+		cmt->cmt.assign(begin, it);
 		return true;
 	}
 
@@ -188,11 +190,10 @@ struct identifier_t : list_item
 		if(!(isalpha(*it) || *it == '_'))
 			return false;
 
-		ident->ident.clear();
-
+		auto begin = it;
 		while(it != end && ident_p(*it))
-			ident->ident += *it++;
-
+			++it;
+		ident->ident.assign(begin, it);
 		return true;
 	}
 
@@ -224,16 +225,21 @@ struct string_t : list_item
 		if(*it != '"')
 			return false;
 
-		str->s.clear();
 		++it;
-		bool last_escape(false);
+		auto begin = it;
 		while(it != end)
 		{
-			if(*it == '"' && !last_escape)
+			if(*it == '"')
 				break;
-			last_escape = (*it == '\\');
-			str->s += *it++;
+			if(*it == '\\')
+			{
+				++it;
+				if(it == end)
+					throw parse_error("string: unexpected eof; expected <char>");
+			}
+			++it;
 		}
+		str->s.assign(begin, it);
 
 		if(it == end)
 			throw parse_error("string: unexpected eof; expected '\"'");
@@ -264,7 +270,7 @@ bool escape_char_p(It& it, const It& end, std::string* escp)
 {
 	if(*it != '\\')
 		return false;
-	It begin = it;
+	auto begin = it;
 	++it;
 	if(it == end)
 		throw parse_error("escape_char: Expected [char]");
@@ -290,7 +296,7 @@ struct variable_t : list_item
 	template <typename It>
 	static bool parse(It& it, const It& end, variable_t* var)
 	{
-		It begin = it;
+		auto begin = it;
 		if(*it != '$')
 			return false;
 		++it;
@@ -308,9 +314,10 @@ struct variable_t : list_item
 		if(it == end)
 			throw parse_error("variable: unexpected eof");
 
-		var->var.clear();
+		begin = it;
 		while(it != end && var_p(*it))
-			var->var += *it++;
+			++it;
+		var->var.assign(begin, it);
 
 		if(it == end)
 			throw parse_error("variable: unexpected eof; expected ')'");
@@ -569,7 +576,6 @@ struct bracketed_args_t : list_item
 		++it;
 
 		brac->args.clear();
-
 		while(it != end)
 		{
 			whitespace_t wsp;
@@ -597,7 +603,6 @@ struct bracketed_args_t : list_item
 			else if(bracketed_args_t::parse(it, end, &brac_nest))
 			{
 				brac->args.emplace_back(std::make_shared<bracketed_args_t>(brac_nest));
-				break;
 			}
 			else if(*it == ')')
 			{
@@ -625,7 +630,12 @@ struct bracketed_args_t : list_item
 	std::string describe() const
 	{
 		std::ostringstream s;
-		s << "bracketed{" << str() << "}";
+		s << "bracketed{";
+		s << '(';
+		for(auto& arg : args)
+			s << arg->describe();
+		s << ')';
+		s << "}";
 		return s.str();
 	}
 };
@@ -709,10 +719,9 @@ struct command_t : list_item
 			{
 				cmd->args.emplace_back(std::make_shared<unquoted_argument_t>(unq));
 			}
-			else if(bracketed_args_t::parse(it, end, &brac)) // parse-bracketed
+			else if(bracketed_args_t::parse(it, end, &brac))
 			{
 				cmd->args.emplace_back(std::make_shared<bracketed_args_t>(brac));
-				break;
 			}
 			else if(*it == ')')
 			{
@@ -761,6 +770,9 @@ struct list_file_t
 {
 	std::vector<std::shared_ptr<list_item> > items;
 
+	/*
+	 * Note: requires > 1 char lookahead so doesn't work with istream iterators
+	 */
 	template <typename It>
 	static bool parse(It& it, const It& end, list_file_t* lst)
 	{
@@ -807,6 +819,15 @@ struct list_file_t
 	}
 };
 
+bool diff(const std::string& s, const std::string& file)
+{
+	std::ifstream ifs(file);
+
+	std::noskipws(ifs);
+	std::string contents{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+	return s != contents;
+}
+
 int main(int argc, char* argv[])
 {
 	std::ifstream ifs;
@@ -823,26 +844,49 @@ int main(int argc, char* argv[])
 	}
 
 	std::noskipws(*is);
-	std::istream_iterator<char> it(*is);
 	const std::istream_iterator<char> end;
+
+	std::string source{std::istream_iterator<char>(*is), std::istream_iterator<char>()};
 
 	list_file_t lst;
 	try
 	{
+		auto it = source.begin();
+		auto end = source.end();
 		if(list_file_t::parse(it, end, &lst))
 		{
-			std::cout << lst.str();
+			std::string str = lst.str();
+			std::cout << str;
+			if(argc > 1)
+			{
+				if(diff(str, argv[1]))
+				{
+					std::cout << ">>>DIFF\n";
+					std::ofstream out("out.cmake");
+					out << str;
+				}
+				else
+				{
+					std::cout << ">>>SUCCESS\n";
+				}
+			}
+			else
+			{
+				std::cout << ">>>SUCCESS\n";
+			}
 			return 0;
 		}
 		else
 		{
 			std::cout << lst.describe();
+			std::cout << ">>>FAILURE\n";
 			return 1;
 		}
 	}
 	catch(const parse_error& ex)
 	{
 		std::cout << lst.describe();
+		std::cout << ">>>EXCEPTION\n";
 		throw;
 	}
 	return 0;
