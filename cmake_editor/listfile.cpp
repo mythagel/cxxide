@@ -62,6 +62,18 @@ bool whitespace_t::ws_p(char c)
 	}
 }
 
+bool whitespace_t::_parse(const char*& c, const char* end, whitespace_t* wsp)
+{
+	if(!ws_p(*c))
+		return false;
+
+	auto begin = c;
+	while(c != end && ws_p(*c))
+		++c;
+	wsp->wsp.assign(begin, c);
+	return true;
+}
+
 std::string whitespace_t::str() const
 {
 	return wsp;
@@ -78,6 +90,19 @@ std::string whitespace_t::describe() const
 comment_t::comment_t()
  : list_item(Type::comment)
 {
+}
+
+bool comment_t::_parse(const char*& c, const char* end, comment_t* cmt)
+{
+	if(*c != '#')
+		return false;
+
+	++c;
+	auto begin = c;
+	while(c != end && *c != '\n')
+		++c;
+	cmt->cmt.assign(begin, c);
+	return true;
 }
 
 std::string comment_t::str() const
@@ -104,6 +129,18 @@ bool identifier_t::ident_p(char c)
 	return isalnum(c) || c == '_';
 }
 
+bool identifier_t::_parse(const char*& c, const char* end, identifier_t* ident)
+{
+	if(!(isalpha(*c) || *c == '_'))
+		return false;
+
+	auto begin = c;
+	while(c != end && ident_p(*c))
+		++c;
+	ident->ident.assign(begin, c);
+	return true;
+}
+
 std::string identifier_t::str() const
 {
 	return ident;
@@ -121,6 +158,36 @@ string_t::string_t()
 {
 }
 
+bool string_t::_parse(const char*& c, const char* end, string_t* str)
+{
+	if(*c != '"')
+		return false;
+
+	++c;
+	auto begin = c;
+	while(c != end)
+	{
+		if(*c == '"')
+			break;
+		if(*c == '\\')
+		{
+			++c;
+			if(c == end)
+				throw parse_error("string: unexpected eof; expected <char>");
+		}
+		++c;
+	}
+	str->s.assign(begin, c);
+
+	if(c == end)
+		throw parse_error("string: unexpected eof; expected '\"'");
+	if(*c != '"')
+		throw parse_error("string: expected '\"'");
+
+	++c;
+	return true;
+}
+
 std::string string_t::str() const
 {
 	std::ostringstream ss;
@@ -135,6 +202,19 @@ std::string string_t::describe() const
 	return s.str();
 }
 
+bool escape_char_p(const char*& c, const char* end, std::string* escp)
+{
+	if(*c != '\\')
+		return false;
+	auto begin = c;
+	++c;
+	if(c == end)
+		throw parse_error("escape_char: Expected [char]");
+	++c;
+	escp->assign(begin, c);
+	return true;
+}
+
 variable_t::variable_t()
  : list_item(Type::variable)
 {
@@ -143,6 +223,36 @@ variable_t::variable_t()
 bool variable_t::var_p(char c)
 {
 	return isalnum(c) || c == '_';
+}
+
+bool variable_t::_parse(const char*& c, const char* end, variable_t* var)
+{
+	if(*c != '$')
+		return false;
+	++c;
+
+	if(c == end)
+		throw parse_error("variable: unexpected eof");
+
+	if(*c != '(')
+		return false;
+	++c;
+
+	if(c == end)
+		throw parse_error("variable: unexpected eof");
+
+	auto begin = c;
+	while(c != end && var_p(*c))
+		++c;
+	var->var.assign(begin, c);
+
+	if(c == end)
+		throw parse_error("variable: unexpected eof; expected ')'");
+	if(*c != ')')
+		throw parse_error("variable: expected ')'");
+	++c;
+
+	return true;
 }
 
 std::string variable_t::str() const
@@ -179,6 +289,61 @@ bool quoted_t::argq_p(char c)
 		default:
 			return true;
 	}
+}
+
+bool quoted_t::_parse(const char*& c, const char* end, quoted_t* quot)
+{
+	if(*c != '"')
+		return false;
+	++c;
+
+	quot->parts.clear();
+
+	variable_t var;
+	std::string escp;
+
+	while(c != end)
+	{
+		if(variable_t::parse(c, end, &var))
+		{
+			quot->parts.emplace_back(std::make_shared<variable_t>(var));
+		}
+		else if(argq_p(*c))
+		{
+			if(quot->parts.empty() || quot->parts.back()->type != Type::raw_string)
+			{
+				quot->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *c)));
+			}
+			else
+			{
+				auto strng = std::dynamic_pointer_cast<raw_string_t>(quot->parts.back());
+				strng->s += *c;
+			}
+			++c;
+		}
+		else if(escape_char_p(c, end, &escp))
+		{
+			if(quot->parts.empty() || quot->parts.back()->type != Type::raw_string)
+			{
+				quot->parts.emplace_back(std::make_shared<raw_string_t>(escp));
+			}
+			else
+			{
+				auto strng = std::dynamic_pointer_cast<raw_string_t>(quot->parts.back());
+				strng->s += escp;
+			}
+		}
+		else if(*c == '"')
+		{
+			++c;
+			return true;
+		}
+		else
+		{
+			throw parse_error("quoted: unexpected char");
+		}
+	}
+	throw parse_error("quoted: unexpected eof; expected '\"'");
 }
 
 std::string quoted_t::str() const
@@ -222,6 +387,77 @@ bool unquoted_argument_t::arg_p(char c)
 	}
 }
 
+bool unquoted_argument_t::_parse(const char*& c, const char* end, unquoted_argument_t* unq)
+{
+	unq->parts.clear();
+
+	variable_t var;
+	std::string escp;
+
+	if(variable_t::parse(c, end, &var))
+	{
+		unq->parts.emplace_back(std::make_shared<variable_t>(var));
+	}
+	else if(arg_p(*c))
+	{
+		unq->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *c)));
+		++c;
+	}
+	else if(escape_char_p(c, end, &escp))
+	{
+		unq->parts.emplace_back(std::make_shared<raw_string_t>(escp));
+	}
+	else
+	{
+		return false;
+	}
+
+	while(c != end)
+	{
+		quoted_t quot;
+
+		if(variable_t::parse(c, end, &var))
+		{
+			unq->parts.emplace_back(std::make_shared<variable_t>(var));
+		}
+		else if(arg_p(*c))
+		{
+			if(unq->parts.empty() || unq->parts.back()->type != Type::raw_string)
+			{
+				unq->parts.emplace_back(std::make_shared<raw_string_t>(std::string(1, *c)));
+			}
+			else
+			{
+				auto strng = std::dynamic_pointer_cast<raw_string_t>(unq->parts.back());
+				strng->s += *c;
+			}
+			++c;
+		}
+		else if(escape_char_p(c, end, &escp))
+		{
+			if(unq->parts.empty() || unq->parts.back()->type != Type::raw_string)
+			{
+				unq->parts.emplace_back(std::make_shared<raw_string_t>(escp));
+			}
+			else
+			{
+				auto strng = std::dynamic_pointer_cast<raw_string_t>(unq->parts.back());
+				strng->s += escp;
+			}
+		}
+		else if(quoted_t::parse(c, end, &quot))
+		{
+			unq->parts.emplace_back(std::make_shared<quoted_t>(quot));
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return true;
+}
+
 std::string unquoted_argument_t::str() const
 {
 	std::ostringstream s;
@@ -240,6 +476,54 @@ std::string unquoted_argument_t::describe() const
 bracketed_args_t::bracketed_args_t()
  : list_item(Type::bracketed)
 {
+}
+
+bool bracketed_args_t::_parse(const char*& c, const char* end, bracketed_args_t* brac)
+{
+	if(*c != '(')
+		return false;
+	++c;
+
+	brac->args.clear();
+	while(c != end)
+	{
+		whitespace_t wsp;
+		comment_t cmt;
+		string_t str;
+		unquoted_argument_t unq;
+		bracketed_args_t brac_nest;
+
+		if(whitespace_t::parse(c, end, &wsp))
+		{
+			brac->args.emplace_back(std::make_shared<whitespace_t>(wsp));
+		}
+		else if(comment_t::parse(c, end, &cmt))
+		{
+			brac->args.emplace_back(std::make_shared<comment_t>(cmt));
+		}
+		else if(string_t::parse(c, end, &str))
+		{
+			brac->args.emplace_back(std::make_shared<string_t>(str));
+		}
+		else if(unquoted_argument_t::parse(c, end, &unq))
+		{
+			brac->args.emplace_back(std::make_shared<unquoted_argument_t>(unq));
+		}
+		else if(bracketed_args_t::parse(c, end, &brac_nest))
+		{
+			brac->args.emplace_back(std::make_shared<bracketed_args_t>(brac_nest));
+		}
+		else if(*c == ')')
+		{
+			++c;
+			return true;
+		}
+		else
+		{
+			throw parse_error("bracketed: expected ')'");
+		}
+	}
+	throw parse_error("bracketed: unexpected eof");
 }
 
 std::string bracketed_args_t::str() const
@@ -269,6 +553,83 @@ command_t::command_t()
 {
 }
 
+bool command_t::_parse(const char*& c, const char* end, command_t* cmd)
+{
+	if(!identifier_t::parse(c, end, &cmd->name))
+		return false;
+
+	while(c != end)
+	{
+		whitespace_t wsp;
+		comment_t cmt;
+
+		if(whitespace_t::parse(c, end, &wsp))
+		{
+			cmd->name_wsp.emplace_back(std::make_shared<whitespace_t>(wsp));
+		}
+		else if(comment_t::parse(c, end, &cmt))
+		{
+			cmd->name_wsp.emplace_back(std::make_shared<comment_t>(cmt));
+		}
+		else if(*c == '(')
+		{
+			break;
+		}
+		else
+		{
+			throw parse_error("command: unexpected char; expected '('");
+		}
+	}
+
+	if(c == end)
+		throw parse_error("command: unexpected eof");
+
+	if(*c != '(')
+		throw parse_error("command: expected '('");
+	++c;
+
+	while(c != end)
+	{
+		whitespace_t wsp;
+		comment_t cmt;
+		string_t str;
+		unquoted_argument_t unq;
+		bracketed_args_t brac;
+
+		if(whitespace_t::parse(c, end, &wsp))
+		{
+			cmd->args.emplace_back(std::make_shared<whitespace_t>(wsp));
+		}
+		else if(comment_t::parse(c, end, &cmt))
+		{
+			cmd->args.emplace_back(std::make_shared<comment_t>(cmt));
+		}
+		else if(string_t::parse(c, end, &str))
+		{
+			cmd->args.emplace_back(std::make_shared<string_t>(str));
+		}
+		else if(unquoted_argument_t::parse(c, end, &unq))
+		{
+			cmd->args.emplace_back(std::make_shared<unquoted_argument_t>(unq));
+		}
+		else if(bracketed_args_t::parse(c, end, &brac))
+		{
+			cmd->args.emplace_back(std::make_shared<bracketed_args_t>(brac));
+		}
+		else if(*c == ')')
+		{
+			++c;
+			return true;
+		}
+		else
+		{
+			throw parse_error("command: unexpected char");
+		}
+	}
+
+	throw parse_error("command: unexpected eof");
+}
+
 std::string command_t::str() const
 {
 	std::ostringstream s;
@@ -295,6 +656,34 @@ std::string command_t::describe() const
 	s << ')';
 	s << "}";
 	return s.str();
+}
+
+bool listfile_t::_parse(const char*& c, const char* end, listfile_t* lst)
+{
+	while(c != end)
+	{
+		comment_t cmt;
+		whitespace_t wsp;
+		command_t cmd;
+
+		if(whitespace_t::parse(c, end, &wsp))
+		{
+			lst->items.emplace_back(std::make_shared<whitespace_t>(wsp));
+		}
+		else if(comment_t::parse(c, end, &cmt))
+		{
+			lst->items.emplace_back(std::make_shared<comment_t>(cmt));
+		}
+		else if(command_t::parse(c, end, &cmd))
+		{
+			lst->items.emplace_back(std::make_shared<command_t>(cmd));
+		}
+		else
+		{
+			throw parse_error("top-level");
+		}
+	}
+	return true;
 }
 
 std::string listfile_t::str() const

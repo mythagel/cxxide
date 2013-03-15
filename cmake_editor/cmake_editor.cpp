@@ -4,14 +4,11 @@
  *  Created on: 01/03/2013
  *      Author: nicholas
  */
+
 #include "listfile.h"
 
 #include <string>
-#include <sstream>
-#include <cctype>
-#include <stdexcept>
 #include <vector>
-#include <memory>
 #include <istream>
 #include <iterator>
 #include <iostream>
@@ -47,9 +44,9 @@ int main(int argc, char* argv[])
 	cmake::listfile_t lst;
 	try
 	{
-		auto it = source.begin();
-		auto end = source.end();
-		if(cmake::listfile_t::parse(it, end, &lst))
+		auto c = source.c_str();
+		auto end = c + source.size();
+		if(cmake::listfile_t::parse(c, end, &lst))
 		{
 			std::string str = lst.str();
 			std::cout << str;
