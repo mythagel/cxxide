@@ -14,13 +14,19 @@ namespace cmake2
 
 struct listparser
 {
+	struct parser_error
+	{
+		parser_error(const char* c)
+		{
+		}
+	};
+
 	virtual void whitespace(const char* c, const char* end) =0;
 	virtual void comment(const char* c, const char* end) =0;
-	virtual void begin_command() =0;
+	virtual void begin_command(const char* c, const char* end) =0;
 	virtual void end_command() =0;
 	virtual void open_bracket() =0;
 	virtual void close_bracket() =0;
-	virtual void identifier(const char* c, const char* end) =0;
 	virtual void begin_argument(bool quoted) =0;
 	virtual void end_argument() =0;
 	virtual void string(const char* c, const char* end) =0;
@@ -70,69 +76,53 @@ struct listparser
 		return isalnum(c) || c == '_';
 	}
 
-	bool parse_identifier(const char*& c, const char* end)
+	bool parse_command(const char*& c, const char* end)
 	{
-		if(!(isalpha(*c) || *c == '_'))
-			return false;
+		{
+			if(!(isalpha(*c) || *c == '_'))
+				return false;
 
-		auto begin = c;
-		while(c != end && ident_p(*c))
-			++c;
-		identifier(begin, c);
-		return true;
-	}
+			auto begin = c;
+			while(c != end && ident_p(*c))
+				++c;
+			begin_command(begin, c);
+		}
 
-//	bool parse_command(const char*& c, const char* end)
-//	{
-//		if(!parse_identifier(c, end))
-//			return false;
-//
-//		while(c != end)
-//		{
-//			whitespace_t wsp;
-//			comment_t cmt;
-//
-//			if(whitespace_t::parse(c, end, &wsp))
-//			{
-//				cmd->name_wsp.emplace_back(std::make_shared<whitespace_t>(wsp));
-//			}
-//			else if(comment_t::parse(c, end, &cmt))
-//			{
-//				cmd->name_wsp.emplace_back(std::make_shared<comment_t>(cmt));
-//			}
-//			else if(*c == '(')
-//			{
-//				break;
-//			}
-//			else
-//			{
-//				throw parse_error("command: unexpected char; expected '('");
-//			}
-//		}
-//
-//		if(c == end)
-//			throw parse_error("command: unexpected eof");
-//
-//		if(*c != '(')
-//			throw parse_error("command: expected '('");
-//		++c;
-//
-//		while(c != end)
-//		{
-//			whitespace_t wsp;
-//			comment_t cmt;
-//			string_t str;
-//			unquoted_argument_t unq;
-//			bracketed_args_t brac;
-//
-//			if(whitespace_t::parse(c, end, &wsp))
-//			{
-//				cmd->args.emplace_back(std::make_shared<whitespace_t>(wsp));
-//			}
-//			else if(comment_t::parse(c, end, &cmt))
-//			{
-//				cmd->args.emplace_back(std::make_shared<comment_t>(cmt));
-//			}
+		while(c != end)
+		{
+			if(parse_whitespace(c, end))
+			{
+			}
+			else if(parse_comment(c, end))
+			{
+			}
+			else if(*c == '(')
+			{
+				break;
+			}
+			else
+			{
+				throw parser_error("command: unexpected char; expected '('");
+			}
+		}
+
+		if(c == end)
+			throw parser_error("command: unexpected eof");
+
+		if(*c != '(')
+			throw parser_error("command: expected '('");
+
+		open_bracket();
+		++c;
+
+		while(c != end)
+		{
+			if(parse_whitespace(c, end))
+			{
+			}
+			else if(parse_comment(c, end))
+			{
+			}
 //			else if(string_t::parse(c, end, &str))
 //			{
 //				cmd->args.emplace_back(std::make_shared<string_t>(str));
@@ -145,42 +135,40 @@ struct listparser
 //			{
 //				cmd->args.emplace_back(std::make_shared<bracketed_args_t>(brac));
 //			}
-//			else if(*c == ')')
-//			{
-//				++c;
-//				return true;
-//			}
-//			else
-//			{
-//				throw parse_error("command: unexpected char");
-//			}
-//		}
-//
-//		throw parse_error("command: unexpected eof");
-//	}
+			else if(*c == ')')
+			{
+				close_bracket();
+				++c;
+				end_command();
+				return true;
+			}
+			else
+			{
+				throw parser_error("command: unexpected char");
+			}
+		}
 
-	bool parse(const char*& c, const char* end)
+		throw parser_error("command: unexpected eof");
+	}
+
+	void parse(const char*& c, const char* end)
 	{
 		while(c != end)
 		{
 			if(parse_whitespace(c, end))
 			{
-
 			}
 			else if(parse_comment(c, end))
 			{
-
 			}
-//			else if(parse_command(c, end))
-//			{
-//
-//			}
+			else if(parse_command(c, end))
+			{
+			}
 			else
 			{
-				return false;
+				throw parser_error("parse: expected wsp / comment / command");
 			}
 		}
-		return true;
 	}
 
 	virtual ~listparser() = default;
