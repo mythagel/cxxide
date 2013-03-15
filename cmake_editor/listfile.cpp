@@ -171,7 +171,7 @@ bool string_t::_parse(const char*& c, const char* end, string_t* str)
 			break;
 		if(*c == '\\')
 		{
-			++c;
+			++c;	// TODO: validate character
 			if(c == end)
 				throw parse_error("string: unexpected eof; expected <char>");
 		}
@@ -209,7 +209,29 @@ bool escape_char_p(const char*& c, const char* end, std::string* escp)
 	auto begin = c;
 	++c;
 	if(c == end)
-		throw parse_error("escape_char: Expected [char]");
+		throw parse_error("escape_char: Unexpected eof");
+
+	switch(*c)
+	{
+		case ' ':
+		case '"':
+		case '#':
+		case '$':
+		case '(':
+		case ')':
+		case '0':
+		case ';':
+		case '@':
+		case '\\':
+		case '^':
+		case 'n':
+		case 'r':
+		case 't':
+			break;
+		default:
+			throw parse_error("escape_char: Expected [ \"#$()0;@\\^nrt]");
+	}
+
 	++c;
 	escp->assign(begin, c);
 	return true;
