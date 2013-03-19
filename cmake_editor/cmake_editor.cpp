@@ -129,46 +129,46 @@ int main(int argc, char* argv[])
 		virtual ~listp() = default;
 	};
 
-	struct listq : public cmake2::listparser_t
-	{
-		std::ostringstream s;
-
-		virtual void whitespace(const char* c, const char* end)
-		{
-			s << std::string(c, end);
-		}
-		virtual void comment(const char* c, const char* end)
-		{
-			s << "cmt{" << '#' << std::string(c, end) << "}";
-		}
-		virtual void begin_command(const char* c, const char* end)
-		{
-			s << "cmd{ident{" << std::string(c, end) << "}";
-		}
-		virtual void open_bracket()
-		{
-			s << '(';
-		}
-		virtual void close_bracket()
-		{
-			s << ')';
-		}
-		virtual void argument(const char* c, const char* end, bool quoted)
-		{
-			s << "arg{";
-			if(quoted)
-				s << '"' << std::string(c, end) << '"';
-			else
-				s << std::string(c, end);
-			s << "}";
-		}
-		virtual void end_command()
-		{
-			s << "}";
-		}
-
-		virtual ~listq() = default;
-	};
+//	struct listq : public cmake2::listparser_t
+//	{
+//		std::ostringstream s;
+//
+//		virtual void whitespace(const char* c, const char* end)
+//		{
+//			s << std::string(c, end);
+//		}
+//		virtual void comment(const char* c, const char* end)
+//		{
+//			s << "cmt{" << '#' << std::string(c, end) << "}";
+//		}
+//		virtual void begin_command(const char* c, const char* end)
+//		{
+//			s << "cmd{ident{" << std::string(c, end) << "}";
+//		}
+//		virtual void open_bracket()
+//		{
+//			s << '(';
+//		}
+//		virtual void close_bracket()
+//		{
+//			s << ')';
+//		}
+//		virtual void argument(const char* c, const char* end, bool quoted)
+//		{
+//			s << "arg{";
+//			if(quoted)
+//				s << '"' << std::string(c, end) << '"';
+//			else
+//				s << std::string(c, end);
+//			s << "}";
+//		}
+//		virtual void end_command()
+//		{
+//			s << "}";
+//		}
+//
+//		virtual ~listq() = default;
+//	};
 
 	std::ifstream ifs;
 	std::istream* is = &std::cin;
