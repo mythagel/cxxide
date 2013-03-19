@@ -11,13 +11,16 @@
 namespace cmake2
 {
 
-struct parser_error
+struct unexpected_eof
+{
+};
+struct expected
 {
 	const char* what;
-	parser_error(const char* c)
-	 : what(c)
-	{
-	}
+};
+struct unexpected
+{
+	char c;
 };
 
 class listparser_t
@@ -39,7 +42,7 @@ public:
 	virtual void end_command() =0;
 
 	/*
-	 *
+	 * TODO doc.
 	 */
 	void parse(const char* c, const char* end);
 

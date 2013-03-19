@@ -214,10 +214,8 @@ int main(int argc, char* argv[])
 		}
 		return 0;
 	}
-	catch(const cmake2::parser_error& ex)
+	catch(...)
 	{
-		std::cout << ex.what << '\n';
-		std::cout << lst.s.str();
 		std::cout << ">>>EXCEPTION\n";
 		throw;
 	}

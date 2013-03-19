@@ -157,6 +157,17 @@ bool match_variable(const char*& c, const char* end)
 	return true;
 }
 
+bool match_argqp(const char*& c, const char* end)
+{
+	if(!argq_p(*c))
+		return false;
+	++c;
+
+	while(c != end && argq_p(*c))
+		++c;
+	return true;
+}
+
 bool match_quoted(const char*& c, const char* end)
 {
 	const auto begin = c;
@@ -166,16 +177,8 @@ bool match_quoted(const char*& c, const char* end)
 
 	while(c != end)
 	{
-		if(match_variable(c, end))
-		{
-		}
-		else if(argq_p(*c))
-		{
-			++c;
-		}
-		else if(match_escape_character(c, end))
-		{
-		}
+		if(match_variable(c, end) || match_argqp(c, end) || match_escape_character(c, end))
+			continue;
 		else if(*c == '"')
 		{
 			++c;
@@ -257,9 +260,9 @@ bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
 	}
 
 	if(c == end)
-		throw parser_error("quoted: unexpected eof; expected '\"'");
+		throw unexpected_eof();
 	if(*c != '"')
-		throw parser_error("quoted: expected '\"'");
+		throw expected{"quoted: expected '\"'"};
 
 	argument(begin, c, true);
 	++c;
@@ -275,23 +278,15 @@ bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
 		return true;
 	}
 
-	if(match_variable(c, end) || match_arg(c, end) || match_escape_character(c, end))
-	{
-	}
-	else
-	{
+	if(! (match_variable(c, end) || match_arg(c, end) || match_escape_character(c, end)) )
 		return false;
-	}
 
 	while(c != end)
 	{
 		if(match_variable(c, end) || match_arg(c, end) || match_escape_character(c, end) || match_quoted(c, end))
-		{
-		}
+			continue;
 		else
-		{
 			break;
-		}
 	}
 
 	argument(begin, c, false);
@@ -313,14 +308,14 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 		else if(*c == '(')
 			break;
 		else
-			throw parser_error("command: unexpected char; expected ws / cmt / (");
+			throw expected{"command: expected ws / cmt / ("};
 	}
 
 	if(c == end)
-		throw parser_error("command: unexpected eof");
+		throw unexpected_eof();
 
 	if(*c != '(')
-		throw parser_error("command: expected '('");
+		throw expected{"command: expected '('"};
 
 	open_bracket();
 	++c;
@@ -351,10 +346,10 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 			}
 		}
 		else
-			throw parser_error("command: unexpected char");
+			throw unexpected{*c};
 	}
 
-	throw parser_error("command: unexpected eof");
+	throw unexpected_eof();
 }
 
 void listparser_t::parse(const char* c, const char* end)
@@ -364,7 +359,7 @@ void listparser_t::parse(const char* c, const char* end)
 		if(parse_whitespace(c, end) || parse_comment(c, end) || parse_command(c, end))
 			continue;
 		else
-			throw parser_error("parse: expected wsp / comment / command");
+			throw expected{"parse: expected wsp / comment / command"};
 	}
 }
 
