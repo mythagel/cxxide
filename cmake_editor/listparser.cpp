@@ -70,7 +70,7 @@ bool ident_p(char c)
 	return isalnum(c) || c == '_';
 }
 
-bool match_escape_character(const char*& c, const char* end)
+bool match_escape_character(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '\\')
@@ -110,7 +110,7 @@ bool match_escape_character(const char*& c, const char* end)
 	return true;
 }
 
-bool match_variable(const char*& c, const char* end)
+bool match_variable(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '$')
@@ -139,12 +139,7 @@ bool match_variable(const char*& c, const char* end)
 	while(c != end && var_p(*c))
 		++c;
 
-	if(c == end)
-	{
-		c = begin;
-		return false;
-	}
-	if(*c != ')')
+	if(c == end || *c != ')')
 	{
 		c = begin;
 		return false;
@@ -154,7 +149,7 @@ bool match_variable(const char*& c, const char* end)
 	return true;
 }
 
-bool match_argqp(const char*& c, const char* end)
+bool match_argqp(const char*& c, const char* const end)
 {
 	if(!argq_p(*c))
 		return false;
@@ -165,7 +160,7 @@ bool match_argqp(const char*& c, const char* end)
 	return true;
 }
 
-bool match_quoted(const char*& c, const char* end)
+bool match_quoted(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '"')
@@ -192,7 +187,7 @@ bool match_quoted(const char*& c, const char* end)
 	return false;
 }
 
-bool match_arg(const char*& c, const char* end)
+bool match_arg(const char*& c, const char* const end)
 {
 	if(!arg_p(*c))
 		return false;
@@ -203,7 +198,7 @@ bool match_arg(const char*& c, const char* end)
 	return true;
 }
 
-bool match_identifier(const char*& c, const char* end)
+bool match_identifier(const char*& c, const char* const end)
 {
 	if(!(isalpha(*c) || *c == '_'))
 		return false;
@@ -219,7 +214,7 @@ bool match_identifier(const char*& c, const char* end)
 namespace cmake2
 {
 
-bool listparser_t::parse_whitespace(const char*& c, const char* end)
+bool listparser_t::parse_whitespace(const char*& c, const char* const end)
 {
 	if(!ws_p(*c))
 		return false;
@@ -231,7 +226,7 @@ bool listparser_t::parse_whitespace(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_comment(const char*& c, const char* end)
+bool listparser_t::parse_comment(const char*& c, const char* const end)
 {
 	if(*c != '#')
 		return false;
@@ -243,7 +238,7 @@ bool listparser_t::parse_comment(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
+bool listparser_t::parse_quoted_argument(const char*& c, const char* const end)
 {
 	if(*c != '"')
 		return false;
@@ -269,7 +264,7 @@ bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
+bool listparser_t::parse_unquoted_argument(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(match_identifier(c, end))
@@ -293,7 +288,7 @@ bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_command(const char*& c, const char* end)
+bool listparser_t::parse_command(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(!match_identifier(c, end))
@@ -352,7 +347,7 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 	throw unexpected_eof();
 }
 
-void listparser_t::parse(const char* c, const char* end)
+void listparser_t::parse(const char* c, const char* const end)
 {
 	while(c != end)
 	{
