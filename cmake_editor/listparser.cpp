@@ -272,14 +272,15 @@ bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
 bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
 {
 	const auto begin = c;
-	if(match_identifier(c, end))
-	{
-		argument(begin, c, false);
-		return true;
-	}
-
 	if(! (match_variable(c, end) || match_arg(c, end) || match_escape_character(c, end)) )
+	{
+		if(match_identifier(c, end))
+		{
+			argument(begin, c, false);
+			return true;
+		}
 		return false;
+	}
 
 	while(c != end)
 	{
