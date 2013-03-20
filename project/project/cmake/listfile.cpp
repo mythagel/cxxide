@@ -95,6 +95,7 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 		{
 			case ' ':
 			case '\t':
+			case '\r':
 			case '\n':
 			{
 				whitespace_t whitespace;
@@ -121,6 +122,7 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 		{
 			case ' ':
 			case '\t':
+			case '\r':
 			case '\n':
 			{
 				whitespace_t* whitespace = new whitespace_t;
@@ -137,7 +139,9 @@ void listfile_t::ParseCommand(std::istream_iterator<char>& it, const std::istrea
 			}
 		}
 
-		if(isalnum(*it) || *it == '<' || *it == '>' || *it == '*' || *it == '"' || *it == '_' || *it == '-' || *it == '(' || *it == '.' || *it == '[' || *it == '@' || *it == '$' || *it == '/' || *it == '\\')
+		if(isalnum(*it) || *it == '\'' || *it == '`' || *it == ':' || *it == '|' || *it == '&' || *it == '<' || *it == '>' || *it == '*' ||
+				*it == '"' || *it == '_' || *it == '-' || *it == '(' || *it == '.' ||
+				*it == '[' || *it == '@' || *it == '$' || *it == '/' || *it == '\\')
 		{
 			argument_t* argument = new argument_t;
 			ParseArgument(it, end, argument);
@@ -198,6 +202,7 @@ void listfile_t::ParseArgument(std::istream_iterator<char>& it, const std::istre
 			case '-':
 			case '_':
 			case '.':
+			case ',':
 			case '/':
 			case '*':
 			case '@':
@@ -208,6 +213,11 @@ void listfile_t::ParseArgument(std::istream_iterator<char>& it, const std::istre
 			case '+':
 			case '<':
 			case '>':
+			case '&':
+			case '|':
+			case '!':
+			case '`':
+			case '\'':
 			{
 				argument->value += *it++;
 				continue;

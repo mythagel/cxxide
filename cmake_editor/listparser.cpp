@@ -8,9 +8,6 @@
 #include "listparser.h"
 #include <cctype>
 
-namespace cmake2
-{
-
 namespace
 {
 bool ws_p(const char c)
@@ -73,7 +70,7 @@ bool ident_p(char c)
 	return isalnum(c) || c == '_';
 }
 
-bool match_escape_character(const char*& c, const char* end)
+bool match_escape_character(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '\\')
@@ -113,7 +110,7 @@ bool match_escape_character(const char*& c, const char* end)
 	return true;
 }
 
-bool match_variable(const char*& c, const char* end)
+bool match_variable(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '$')
@@ -142,12 +139,7 @@ bool match_variable(const char*& c, const char* end)
 	while(c != end && var_p(*c))
 		++c;
 
-	if(c == end)
-	{
-		c = begin;
-		return false;
-	}
-	if(*c != ')')
+	if(c == end || *c != ')')
 	{
 		c = begin;
 		return false;
@@ -157,7 +149,7 @@ bool match_variable(const char*& c, const char* end)
 	return true;
 }
 
-bool match_argqp(const char*& c, const char* end)
+bool match_argqp(const char*& c, const char* const end)
 {
 	if(!argq_p(*c))
 		return false;
@@ -168,7 +160,7 @@ bool match_argqp(const char*& c, const char* end)
 	return true;
 }
 
-bool match_quoted(const char*& c, const char* end)
+bool match_quoted(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(*c != '"')
@@ -195,7 +187,7 @@ bool match_quoted(const char*& c, const char* end)
 	return false;
 }
 
-bool match_arg(const char*& c, const char* end)
+bool match_arg(const char*& c, const char* const end)
 {
 	if(!arg_p(*c))
 		return false;
@@ -206,7 +198,7 @@ bool match_arg(const char*& c, const char* end)
 	return true;
 }
 
-bool match_identifier(const char*& c, const char* end)
+bool match_identifier(const char*& c, const char* const end)
 {
 	if(!(isalpha(*c) || *c == '_'))
 		return false;
@@ -219,7 +211,10 @@ bool match_identifier(const char*& c, const char* end)
 
 }
 
-bool listparser_t::parse_whitespace(const char*& c, const char* end)
+namespace cmake2
+{
+
+bool listparser_t::parse_whitespace(const char*& c, const char* const end)
 {
 	if(!ws_p(*c))
 		return false;
@@ -231,7 +226,7 @@ bool listparser_t::parse_whitespace(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_comment(const char*& c, const char* end)
+bool listparser_t::parse_comment(const char*& c, const char* const end)
 {
 	if(*c != '#')
 		return false;
@@ -243,7 +238,7 @@ bool listparser_t::parse_comment(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
+bool listparser_t::parse_quoted_argument(const char*& c, const char* const end)
 {
 	if(*c != '"')
 		return false;
@@ -262,14 +257,14 @@ bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
 	if(c == end)
 		throw unexpected_eof();
 	if(*c != '"')
-		throw expected{"quoted: expected '\"'"};
+		throw expected{"quoted-argument", "\""};
 
 	argument(begin, c, true);
 	++c;
 	return true;
 }
 
-bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
+bool listparser_t::parse_unquoted_argument(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(! (match_variable(c, end) || match_arg(c, end) || match_escape_character(c, end)) )
@@ -294,7 +289,7 @@ bool listparser_t::parse_unquoted_argument(const char*& c, const char* end)
 	return true;
 }
 
-bool listparser_t::parse_command(const char*& c, const char* end)
+bool listparser_t::parse_command(const char*& c, const char* const end)
 {
 	const auto begin = c;
 	if(!match_identifier(c, end))
@@ -309,14 +304,14 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 		else if(*c == '(')
 			break;
 		else
-			throw expected{"command: expected ws / cmt / ("};
+			throw expected{"command", "ws / cmt / ("};
 	}
 
 	if(c == end)
 		throw unexpected_eof();
 
 	if(*c != '(')
-		throw expected{"command: expected '('"};
+		throw expected{"command", "("};
 
 	open_bracket();
 	++c;
@@ -347,20 +342,20 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 			}
 		}
 		else
-			throw unexpected{*c};
+			throw expected{"command", "ws / cmt / quoted-argument / unquoted-argument / ( / )"};
 	}
 
 	throw unexpected_eof();
 }
 
-void listparser_t::parse(const char* c, const char* end)
+void listparser_t::parse(const char* c, const char* const end)
 {
 	while(c != end)
 	{
 		if(parse_whitespace(c, end) || parse_comment(c, end) || parse_command(c, end))
 			continue;
 		else
-			throw expected{"parse: expected wsp / comment / command"};
+			throw expected{"top", "wsp / comment / command"};
 	}
 }
 
