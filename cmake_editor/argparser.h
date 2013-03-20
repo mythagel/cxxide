@@ -28,12 +28,12 @@ struct argparser_t
 //		return false;
 //	}
 
-	bool name_p(const char c)
+	static bool name_p(const char c)
 	{
 		return isalnum(c) || c == '/' || c == '_' || c == '.' || c == '+' || c == '-';
 	}
 	//	name = 1*(ALPHA / DIGIT / "/" / "_" / "." / "+" / "-")
-	bool match_name(const char*& c, const char* end)
+	static bool match_name(const char*& c, const char* end)
 	{
 		if(!name_p(*c))
 			return false;
@@ -44,19 +44,63 @@ struct argparser_t
 		return true;
 	}
 
-	bool symbol_p(const char c)
+	static bool match_escape_character(const char*& c, const char* const end)
+	{
+		const auto begin = c;
+		if(*c != '\\')
+			return false;
+		++c;
+		if(c == end)
+		{
+			c = begin;
+			return false;
+		}
+
+		switch(*c)
+		{
+			case ' ':
+			case '"':
+			case '#':
+			case '$':
+			case '(':
+			case ')':
+			case '0':
+			case ';':
+			case '@':
+			case '\\':
+			case '^':
+			case 'n':
+			case 'r':
+			case 't':
+				break;
+			default:
+			{
+				c = begin;
+				return false;
+			}
+		}
+
+		++c;
+		return true;
+	}
+
+	static bool symbol_p(const char c)
 	{
 		return c != '$' && c != '{' && c != '}' && c != '\\' && c != '@';
 	}
 	//	symbol = 1*<CHAR excluding "$" "{" "}" "\\" "@">
-	bool match_symbol(const char*& c, const char* end)
+	static bool match_symbol(const char*& c, const char* end)
 	{
-		if(!symbol_p(*c))
-			return false;
-		++c;
-
-		while(c != end && symbol_p(*c))
+		if(symbol_p(*c))
 			++c;
+		else if(!match_escape_character(c, end))
+			return false;
+
+		while(c != end)
+			if(symbol_p(*c))
+				++c;
+			else if(!match_escape_character(c, end))
+				break;
 		return true;
 	}
 
@@ -106,7 +150,7 @@ struct argparser_t
 			return false;
 
 		const auto begin = c;
-		if(!match_multipleids(c, end))
+		if(!parse_multipleids(c, end))
 			return false;
 
 		if(c == end || *c != '}')
@@ -138,7 +182,7 @@ struct argparser_t
 			return false;
 
 		const auto begin = c;
-		if(!match_multipleids(c, end))
+		if(!parse_multipleids(c, end))
 			return false;
 
 		if(c == end || *c != '}')
@@ -150,20 +194,20 @@ struct argparser_t
 	}
 
 	//	Variable = env-curly / ncurly / dcurly / atname
-	bool match_variable(const char*& c, const char* const end)
+	bool parse_variable(const char*& c, const char* const end)
 	{
 		return parse_env_curly(c, end) || parse_ncurly(c, end) || parse_dcurly(c, end) || parse_atname(c, end);
 	}
 
 	//	MultipleIds = *(name / Variable)
-	bool match_multipleids(const char*& c, const char* end)
+	bool parse_multipleids(const char*& c, const char* end)
 	{
-		if(! (match_name(c, end) || match_variable(c, end)))
+		if(! (match_name(c, end) || parse_variable(c, end)))
 			return false;
 
 		while(c != end)
 		{
-			if(match_name(c, end) || match_variable(c, end))
+			if(match_name(c, end) || parse_variable(c, end))
 				continue;
 			else
 				break;
@@ -174,7 +218,7 @@ struct argparser_t
 	//	EnvVarName = MultipleIds / (symbol EnvVarName)
 	bool _envvarname(const char*& c, const char* end)
 	{
-		return match_multipleids(c, end) || (match_symbol(c, end) && match_envvarname(c, end));
+		return parse_multipleids(c, end) || (match_symbol(c, end) && parse_multipleids(c, end));
 	}
 	bool match_envvarname(const char*& c, const char* end)
 	{
