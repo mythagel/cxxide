@@ -228,22 +228,8 @@ struct argparser_t
 	}
 
 //	Start = (String cal_BSLASH) / String
-//
 //	String = Variable / OuterText
-//
-
-
-//
 //	OuterText = cal_name / "@" / "$" / "{" / "}" / cal_symbol
-//
-
-
-
-//
-
-
-
-
 
 };
 
