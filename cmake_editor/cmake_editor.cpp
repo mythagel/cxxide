@@ -214,10 +214,14 @@ int main(int argc, char* argv[])
 		}
 		return 0;
 	}
-	catch(...)
+	catch(const cmake2::unexpected_eof&)
 	{
 		std::cout << ">>>EXCEPTION\n";
-		throw;
+	}
+	catch(const cmake2::expected& ex)
+	{
+		std::cout << ex.context << ": expected '" << ex.what << "'\n";
+		std::cout << ">>>EXCEPTION\n";
 	}
 	return 0;
 }

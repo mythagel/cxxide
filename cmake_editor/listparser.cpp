@@ -8,9 +8,6 @@
 #include "listparser.h"
 #include <cctype>
 
-namespace cmake2
-{
-
 namespace
 {
 bool ws_p(const char c)
@@ -219,6 +216,9 @@ bool match_identifier(const char*& c, const char* end)
 
 }
 
+namespace cmake2
+{
+
 bool listparser_t::parse_whitespace(const char*& c, const char* end)
 {
 	if(!ws_p(*c))
@@ -262,7 +262,7 @@ bool listparser_t::parse_quoted_argument(const char*& c, const char* end)
 	if(c == end)
 		throw unexpected_eof();
 	if(*c != '"')
-		throw expected{"quoted: expected '\"'"};
+		throw expected{"quoted-argument", "\""};
 
 	argument(begin, c, true);
 	++c;
@@ -308,14 +308,14 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 		else if(*c == '(')
 			break;
 		else
-			throw expected{"command: expected ws / cmt / ("};
+			throw expected{"command", "ws / cmt / ("};
 	}
 
 	if(c == end)
 		throw unexpected_eof();
 
 	if(*c != '(')
-		throw expected{"command: expected '('"};
+		throw expected{"command", "("};
 
 	open_bracket();
 	++c;
@@ -346,7 +346,7 @@ bool listparser_t::parse_command(const char*& c, const char* end)
 			}
 		}
 		else
-			throw unexpected{*c};
+			throw expected{"command", "ws / cmt / quoted-argument / unquoted-argument / ( / )"};
 	}
 
 	throw unexpected_eof();
@@ -359,7 +359,7 @@ void listparser_t::parse(const char* c, const char* end)
 		if(parse_whitespace(c, end) || parse_comment(c, end) || parse_command(c, end))
 			continue;
 		else
-			throw expected{"parse: expected wsp / comment / command"};
+			throw expected{"top", "wsp / comment / command"};
 	}
 }
 

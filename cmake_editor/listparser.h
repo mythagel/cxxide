@@ -11,16 +11,11 @@
 namespace cmake2
 {
 
-struct unexpected_eof
-{
-};
+struct unexpected_eof{};
 struct expected
 {
+	const char* context;
 	const char* what;
-};
-struct unexpected
-{
-	char c;
 };
 
 class listparser_t
