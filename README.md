@@ -1,4 +1,3 @@
 cxxide
 ======
 
-Deprecated.
