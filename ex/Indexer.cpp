@@ -63,18 +63,23 @@ public:
 	{
 	}
 
-	virtual bool HandleTopLevelDecl(clang::DeclGroupRef d)
+	virtual bool HandleTopLevelDecl(clang::DeclGroupRef decl_group)
 	{
-		static int count = 0;
-		for (auto it = d.begin(); it != d.end(); ++it)
+		for (auto& decl : decl_group)
 		{
-//			std::cout << (*it)->getDeclKindName() << '\n';
-			count++;
-			clang::VarDecl *vd = llvm::dyn_cast<clang::VarDecl>(*it);
-			if (!vd)
+			clang::NamedDecl *nd = llvm::dyn_cast<clang::NamedDecl>(decl);
+			if(nd)
 			{
-				continue;
+			    std::cout << decl->getDeclKindName() << " " << nd->getNameAsString() << "\n";
 			}
+			else
+			{
+			    std::cout << "Type: " << decl->getDeclKindName() << '\n';
+			}
+			
+			clang::VarDecl *vd = llvm::dyn_cast<clang::VarDecl>(decl);
+			if (!vd)
+				continue;
 			if (vd->isFileVarDecl() && !vd->hasExternalStorage())
 			{
 				std::cerr << "Read top-level variable decl: '";
@@ -131,7 +136,7 @@ int main()
 
 	preprocessor.getBuiltinInfo().InitializeBuiltins(preprocessor.getIdentifierTable(), languageOptions);
 
-	const FileEntry *pFile = fileManager.getFile("/home/nicholas/dev/4527961/v8_wrap_class.cpp");
+	const FileEntry *pFile = fileManager.getFile("/home/nicholas/dev/cxxide/ex/simple.cpp");
 	sourceManager.createMainFileID(pFile);
 
 	IdentifierTable identifierTable(languageOptions);
@@ -139,20 +144,36 @@ int main()
 
 	Builtin::Context builtinContext;
 	builtinContext.InitializeTarget(*pTargetInfo);
-	ASTContext astContext(languageOptions, sourceManager, pTargetInfo, identifierTable, selectorTable, builtinContext,
-		0 /* size_reserve*/);
+	ASTContext astContext(languageOptions, sourceManager, pTargetInfo, identifierTable, selectorTable, builtinContext, 0 /* size_reserve*/);
+	
+	{
+    	preprocessor.EnterMainSourceFile();
+        pTextDiagnosticPrinter->BeginSourceFile(languageOptions, &preprocessor);
+        
+        clang::Token token;
+        do {
+            preprocessor.Lex(token);
+            if( pDiagnosticsEngine->hasErrorOccurred())
+                break;
+            
+            preprocessor.DumpToken(token);
+            std::cerr << std::endl;
+        } while( token.isNot(clang::tok::eof));
+        
+        pTextDiagnosticPrinter->EndSourceFile();
+    }
+	
 	MyASTConsumer astConsumer;
 
 	Sema sema(preprocessor, astContext, astConsumer);
 
 	CodeCompleteOptions codeCompleteOptions;
 	PrintingCodeCompleteConsumer CompletionConsumer(codeCompleteOptions, llvm::outs());
+//	preprocessor.SetCodeCompletionPoint(pFile, 23, 24);
 
-	preprocessor.SetCodeCompletionPoint(pFile, 218, 6);
 
 	pTextDiagnosticPrinter->BeginSourceFile(languageOptions, &preprocessor);
 	ParseAST(preprocessor, &astConsumer, astContext, /*PrintStats*/false, TU_Complete, &CompletionConsumer);
-
 	pTextDiagnosticPrinter->EndSourceFile();
 
     delete pDiagnosticsEngine;
