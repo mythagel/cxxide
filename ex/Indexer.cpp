@@ -146,22 +146,29 @@ int main()
 	builtinContext.InitializeTarget(*pTargetInfo);
 	ASTContext astContext(languageOptions, sourceManager, pTargetInfo, identifierTable, selectorTable, builtinContext, 0 /* size_reserve*/);
 	
-	{
-    	preprocessor.EnterMainSourceFile();
-        pTextDiagnosticPrinter->BeginSourceFile(languageOptions, &preprocessor);
-        
-        clang::Token token;
-        do {
-            preprocessor.Lex(token);
-            if( pDiagnosticsEngine->hasErrorOccurred())
-                break;
-            
-            preprocessor.DumpToken(token);
-            std::cerr << std::endl;
-        } while( token.isNot(clang::tok::eof));
-        
-        pTextDiagnosticPrinter->EndSourceFile();
-    }
+	/*
+	Not possible (or not idiomatic) to make multiple passes over the preprocessor tokens.
+	Approach is backwards anyway - common case is parse succeedes and we instantly have
+	semantic information.
+	Only fallback to token scanning if full parse fails.
+	*/
+//	{
+//    	preprocessor.EnterMainSourceFile();
+//        pTextDiagnosticPrinter->BeginSourceFile(languageOptions, &preprocessor);
+//        
+//        clang::Token token;
+//        do {
+//            preprocessor.Lex(token);
+//            if( pDiagnosticsEngine->hasErrorOccurred())
+//                break;
+//            
+//            preprocessor.DumpToken(token);
+//            std::cerr << std::endl;
+//        } while( token.isNot(clang::tok::eof));
+//        
+//        pTextDiagnosticPrinter->EndSourceFile();
+//        std::cout << "\n\n\n";
+//    }
 	
 	MyASTConsumer astConsumer;
 

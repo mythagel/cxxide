@@ -1,3 +1,5 @@
+#include "simple.h"
+
 int global;
 
 int func(int parameter)

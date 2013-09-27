@@ -40,3 +40,13 @@ llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core)
 target_link_libraries(Indexer ${REQ_LLVM_LIBRARIES} clangBasic clangFrontend clangLex clangAST clangSema clangParse)
 ADD_DEPENDENCIES(experiments Indexer)
 
+ADD_EXECUTABLE(ci_token_lexer EXCLUDE_FROM_ALL ci_token_lexer.cpp)
+llvm_map_components_to_libraries(REQ_LLVM_LIBRARIES core)
+target_link_libraries(ci_token_lexer ${REQ_LLVM_LIBRARIES} clangBasic clangFrontend clangLex clangAST clangSema clangParse)
+ADD_DEPENDENCIES(experiments ci_token_lexer)
+
+include_directories( ${PROJECT_SOURCE_DIR}/deps/libgit2/include/ )
+ADD_EXECUTABLE(git_basic EXCLUDE_FROM_ALL git_basic.cpp)
+TARGET_LINK_LIBRARIES(git_basic git2)
+ADD_DEPENDENCIES(experiments git_basic)
+

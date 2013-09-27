@@ -12,6 +12,8 @@ cmake json compilation db generation
 clang lexed tokens
 clang ast visitor
 
+clang LibFormat for code formatter.
+
 libgit basics
 
 requirements
