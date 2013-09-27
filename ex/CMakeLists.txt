@@ -50,3 +50,5 @@ ADD_EXECUTABLE(git_basic EXCLUDE_FROM_ALL git_basic.cpp)
 TARGET_LINK_LIBRARIES(git_basic git2)
 ADD_DEPENDENCIES(experiments git_basic)
 
+ADD_EXECUTABLE(hash_image EXCLUDE_FROM_ALL hash_image.cpp)
+ADD_DEPENDENCIES(experiments hash_image)
