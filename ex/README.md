@@ -31,6 +31,9 @@ requirements
 ================
 
 git provides
+ - clone
+ - init
+ - branch name
  - push code
  - pull code
  - create branch
