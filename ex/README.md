@@ -1,4 +1,3 @@
-
 basic xaw
 basic xft
 
@@ -13,6 +12,12 @@ clang lexed tokens
 clang ast visitor
 
 clang LibFormat for code formatter.
+
+
+Xaw
+===============
+http://xdvi.cvs.sourceforge.net/viewvc/xdvi/xdvik/texk/xdvik/xdvi.c?view=markup
+Good examples of icons, document display, fullscreen, set window size, app resources...
 
 libgit basics
 
