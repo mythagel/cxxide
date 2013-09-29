@@ -19,6 +19,12 @@ Xaw
 http://xdvi.cvs.sourceforge.net/viewvc/xdvi/xdvik/texk/xdvik/xdvi.c?view=markup
 Good examples of icons, document display, fullscreen, set window size, app resources...
 
+ * set_icon_and_title
+ * set_windowsize
+ * net_wm_toggle_fullscreen
+ * reconfigure_window
+ * 
+
 libgit basics
 
 requirements
