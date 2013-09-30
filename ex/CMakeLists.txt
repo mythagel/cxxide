@@ -22,6 +22,11 @@ ADD_EXECUTABLE(frame EXCLUDE_FROM_ALL frame.cpp)
 TARGET_LINK_LIBRARIES(frame ${X11_LIBRARIES} ${X11_Xt_LIB} Xaw Xmu Xt SM ICE Xext X11)
 ADD_DEPENDENCIES(experiments frame)
 
+INCLUDE_DIRECTORIES(${X11_INCLUDE_DIR} ${X11_Xt_INCLUDE_PATH} /usr/include/X11 /usr/include/freetype2)
+ADD_EXECUTABLE(xft_basic EXCLUDE_FROM_ALL xft_basic.cpp)
+TARGET_LINK_LIBRARIES(xft_basic ${X11_LIBRARIES} ${X11_Xt_LIB} Xft Xaw Xmu Xt SM ICE Xext X11)
+ADD_DEPENDENCIES(experiments xft_basic)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_BINARY_DIR}/deps/llvm/share/llvm/cmake/")
 include(LLVMConfig)
 
