@@ -28,6 +28,19 @@
 
 class project_t
 {
+    // vcs
+    push();
+    pull();
+    commit();
+    branch();
+    merge();
+    
+    // configuration
+    configure();
+    build();
+    
+    // stats
+    
 };
 
 /*
