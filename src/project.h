@@ -52,18 +52,18 @@ class project_t
  create cmake decl adapter file
  create CMakelists.txt file
 */
-project_t create(const std::string& name, const std::string& path);
+project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
 
 /*
  open path/CMakelists.txt
  open git repo
 */
-project_t open(const std::string& path);
+project_t open(const std::string& source_path, const std::string& build_path);
 
 /*
  git clone url into path
  then open path.
 */
-project_t clone(const std::string& url, const std::string& path);
+project_t clone(const std::string& url, const std::string& source_path, const std::string& build_path);
 
 #endif /* PROJECT_H_ */
