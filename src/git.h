@@ -16,54 +16,49 @@
  */
 
 /*
- * project.h
+ * git.h
  *
- *  Created on: 2013-10-03
+ *  Created on: 2013-10-04
  *      Author: nicholas
  */
 
-#ifndef PROJECT_H_
-#define PROJECT_H_
-#include <string>
+#ifndef DVCSGIT_H_
+#define DVCSGIT_H_
 
-class project_t
+namespace git
 {
-    // dvcs
+
+class repo_t
+{
+    open();
+    init();
+    clone();
+    
     push();
     pull();
     commit();
     branch();
     merge();
-    
-    // build
-    configure();
-    build();
-    
-    // code insight
-    
 };
 
-/*
- check path exists
- check path/name does NOT exist
- 
- create folder path/name
- git init
- create cmake decl adapter file
- create CMakelists.txt file
-*/
-project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
+repo_t init(const std::string& path);
 
-/*
- open path/CMakelists.txt
- open git repo
-*/
-project_t open(const std::string& source_path, const std::string& build_path);
+cat-file
+commit-tree
+count-objects
+diff-index
+hash-object
+merge-base
+read-tree
+rev-list
+rev-parse
+show-ref
+symbolic-ref
+update-index
+update-ref
+verify-pack
+write-tree
 
-/*
- git clone url into path
- then open path.
-*/
-project_t clone(const std::string& url, const std::string& source_path, const std::string& build_path);
+}
 
-#endif /* PROJECT_H_ */
+#endif /* DVCSGIT_H_ */
