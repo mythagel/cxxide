@@ -20,10 +20,21 @@
  *
  *  Created on: 2013-10-04
  *      Author: nicholas
+ 
+ create folder
+git init
+create CMakeLists.txt
+local clang components and scan folder.
+git add CMakeLists.txt
+git commit -m Initial
+create build folder
+cmake source_path -GNinja
+
  */
 
 #ifndef DVCSGIT_H_
 #define DVCSGIT_H_
+#include <string>
 
 namespace git
 {
