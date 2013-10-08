@@ -16,25 +16,22 @@
  */
 
 /*
- * git.cpp
+ * exec.h
  *
- *  Created on: 2013-10-04
+ *  Created on: 2013-10-08
  *      Author: nicholas
  */
 
-#include "git.h"
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdexcept>
+#ifndef EXEC_H_
+#define EXEC_H_
+#include <string>
+#include <vector>
 
-namespace git
+namespace system
 {
 
-repo_t init(const std::string& path)
-{
-    int err;
-    err = system::exec(path, {"git", "init", "-q"});
-}
+int exec(const std::string& cwd, const std::vector<std::string>& args, const std::string& in, std::string* out);
 
 }
 
+#endif /* EXEC_H_ */
