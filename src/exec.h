@@ -26,12 +26,27 @@
 #define EXEC_H_
 #include <string>
 #include <vector>
+#include <stdexcept>
 
+namespace cxxide
+{
 namespace system
 {
 
-int exec(const std::string& cwd, const std::vector<std::string>& args, const std::string& in, std::string* out);
+struct error : std::runtime_error
+{
+    int code;
+    error(const std::string& what, int code);
+    error(const std::string& what);
+    virtual ~error();
+};
 
+int exec(const std::string& wd, const std::vector<std::string>& args);
+int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in);
+int exec(const std::string& wd, const std::vector<std::string>& args, std::string* out);
+int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in, std::string* out);
+
+}
 }
 
 #endif /* EXEC_H_ */

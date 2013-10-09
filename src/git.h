@@ -35,41 +35,52 @@ cmake source_path -GNinja
 #ifndef DVCSGIT_H_
 #define DVCSGIT_H_
 #include <string>
+#include <stdexcept>
 
+namespace cxxide
+{
 namespace git
 {
 
-class repo_t
+struct error : std::runtime_error
 {
-    open();
-    init();
-    clone();
-    
-    push();
-    pull();
-    commit();
-    branch();
-    merge();
+    error(const std::string& what);
+    virtual ~error();
+};
+
+struct repo_t
+{
+    std::string root;
+//    open();
+//    init();
+//    clone();
+//    
+//    push();
+//    pull();
+//    commit();
+//    branch();
+//    merge();
 };
 
 repo_t init(const std::string& path);
 
-cat-file
-commit-tree
-count-objects
-diff-index
-hash-object
-merge-base
-read-tree
-rev-list
-rev-parse
-show-ref
-symbolic-ref
-update-index
-update-ref
-verify-pack
-write-tree
+//cat-file
+//commit-tree
+//count-objects
+//diff-index
+//hash-object
+//merge-base
+//read-tree
+//rev-list
+//rev-parse
+//show-ref
+//symbolic-ref
+//update-index
+//update-ref
+//verify-pack
+//write-tree
 
+}
 }
 
 #endif /* DVCSGIT_H_ */

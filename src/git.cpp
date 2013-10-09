@@ -23,18 +23,37 @@
  */
 
 #include "git.h"
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdexcept>
+#include "exec.h"
+#include <exception>
 
+namespace cxxide
+{
 namespace git
 {
 
-repo_t init(const std::string& path)
+error::error(const std::string& what)
+ : std::runtime_error(what)
 {
-    int err;
-    err = system::exec(path, {"git", "init", "-q"});
+}
+error::~error()
+{
 }
 
+repo_t init(const std::string& path)
+{
+    try
+    {
+        int err = system::exec(path, {"git", "init", "-q"});
+        if(err) throw error("git init failed");
+        
+        return { path };
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("git init failed"));
+    }
+}
+
+}
 }
 
