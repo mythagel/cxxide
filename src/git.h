@@ -45,7 +45,7 @@ namespace git
 struct error : std::runtime_error
 {
     error(const std::string& what);
-    virtual ~error();
+    virtual ~error() noexcept;
 };
 
 struct repo_t

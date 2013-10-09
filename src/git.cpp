@@ -35,7 +35,7 @@ error::error(const std::string& what)
  : std::runtime_error(what)
 {
 }
-error::~error()
+error::~error() noexcept
 {
 }
 
@@ -43,8 +43,9 @@ repo_t init(const std::string& path)
 {
     try
     {
-        int err = system::exec(path, {"git", "init", "-q"});
-        if(err) throw error("git init failed");
+        system::stream_t stream;
+        int err = system::exec(path, {"git", "init", "-q"}, stream);
+        if(err) throw error(stream.err);
         
         return { path };
     }

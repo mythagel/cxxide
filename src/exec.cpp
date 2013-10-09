@@ -24,6 +24,7 @@
 
 #include "exec.h"
 #include <cstring>
+#include <cstdlib>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -42,7 +43,7 @@ error::error(const std::string& what)
  : std::runtime_error(what), code(0)
 {
 }
-error::~error()
+error::~error() noexcept
 {
 }
 
@@ -82,11 +83,15 @@ int exec(const std::string& wd, const std::vector<std::string>& args)
             if(!wd.empty())
             {
                 int err = chdir(wd.c_str());
-                if(err) throw error("chdir", errno);
+                if(err)
+                {
+                    perror("chdir");
+                    abort();
+                }
             }
             
             execvp(argv[0], argv.data());
-            throw error("execvp", errno);
+            abort();
         }
         default:
         {
@@ -96,123 +101,22 @@ int exec(const std::string& wd, const std::vector<std::string>& args)
             if(WIFEXITED(status))
                 return WEXITSTATUS(status);
             
-            throw error("Failed to exec child.");
+            throw error("Failed to exec child: ");
         }
     }
     
     throw std::logic_error("exec");
 }
-int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in)
-{
-    auto argv = convert_args(args);
-    
-    int infd[2];
-    pipe(infd);
-    
-    pid_t pid = fork();
-    switch(pid)
-    {
-        case -1:
-        {
-            throw error("fork", errno);
-        }
-        case 0:
-        {
-            close(infd[1]);
-            dup2(infd[0], 0);
-            close(infd[0]);
-            
-            if(!wd.empty())
-            {
-                int err = chdir(wd.c_str());
-                if(err) throw error("chdir", errno);
-            }
-            
-            execvp(argv[0], argv.data());
-            throw error("execvp", errno);
-        }
-        default:
-        {
-            close(infd[0]);
-            
-            write(infd[1], in.c_str(), in.size());
-            close(infd[1]);
-            
-            int status;
-            waitpid(pid, &status, 0);
-            
-            if(WIFEXITED(status))
-                return WEXITSTATUS(status);
-            
-            throw error("Failed to exec child.");
-        }
-    }
-    
-    throw std::logic_error("exec");
-}
-int exec(const std::string& wd, const std::vector<std::string>& args, std::string* out)
-{
-    auto argv = convert_args(args);
-    
-    int outfd[2];
-    pipe(outfd);
-    
-    pid_t pid = fork();
-    switch(pid)
-    {
-        case -1:
-        {
-            throw error("fork", errno);
-        }
-        case 0:
-        {
-            close(outfd[0]);
-            dup2(outfd[1], 1);
-            close(outfd[1]);
-            
-            if(!wd.empty())
-            {
-                int err = chdir(wd.c_str());
-                if(err) throw error("chdir", errno);
-            }
-
-            execvp(argv[0], argv.data());
-            throw error("execvp", errno);
-        }
-        default:
-        {
-            close(outfd[1]);
-            
-            char buffer[2048];
-            while(true)
-            {
-                ssize_t n = read(outfd[0], buffer, sizeof(buffer));
-                if(n == 0) break;
-                if(n == -1) throw error("read", errno);
-                out->insert(out->end(), buffer, buffer + n);
-            }
-            close(outfd[0]);
-            
-            int status;
-            waitpid(pid, &status, 0);
-            
-            if(WIFEXITED(status))
-                return WEXITSTATUS(status);
-            
-            throw error("Failed to exec child.");
-        }
-    }
-    
-    throw std::logic_error("exec");
-}
-int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in, std::string* out)
+int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& stream)
 {
     auto argv = convert_args(args);
     
     int infd[2];
     int outfd[2];
+    int errfd[2];
     pipe(infd);
     pipe(outfd);
+    pipe(errfd);
     
     pid_t pid = fork();
     switch(pid)
@@ -225,28 +129,36 @@ int exec(const std::string& wd, const std::vector<std::string>& args, const std:
         {
             close(infd[1]);
             close(outfd[0]);
+            close(errfd[0]);
 
             dup2(infd[0], 0);
             dup2(outfd[1], 1);
+            dup2(errfd[1], 1);
 
             close(infd[0]);
             close(outfd[1]);
+            close(errfd[1]);
             
             if(!wd.empty())
             {
                 int err = chdir(wd.c_str());
-                if(err) throw error("chdir", errno);
+                if(err)
+                {
+                    perror("chdir");
+                    abort();
+                }
             }
             
             execvp(argv[0], argv.data());
-            throw error("execvp", errno);
+            abort();
         }
         default:
         {
             close(infd[0]);
             close(outfd[1]);
+            close(errfd[1]);
             
-            write(infd[1], in.c_str(), in.size());
+            write(infd[1], stream.in.c_str(), stream.in.size());
             close(infd[1]);
             
             char buffer[2048];
@@ -255,9 +167,18 @@ int exec(const std::string& wd, const std::vector<std::string>& args, const std:
                 ssize_t n = read(outfd[0], buffer, sizeof(buffer));
                 if(n == 0) break;
                 if(n == -1) throw error("read", errno);
-                out->insert(out->end(), buffer, buffer + n);
+                stream.out.insert(stream.out.end(), buffer, buffer + n);
             }
             close(outfd[0]);
+            
+            while(true)
+            {
+                ssize_t n = read(errfd[0], buffer, sizeof(buffer));
+                if(n == 0) break;
+                if(n == -1) throw error("read", errno);
+                stream.err.insert(stream.err.end(), buffer, buffer + n);
+            }
+            close(errfd[0]);
             
             int status;
             waitpid(pid, &status, 0);
@@ -265,7 +186,7 @@ int exec(const std::string& wd, const std::vector<std::string>& args, const std:
             if(WIFEXITED(status))
                 return WEXITSTATUS(status);
             
-            throw error("Failed to exec child.");
+            throw error("Failed to exec child: " + stream.err);
         }
     }
     throw std::logic_error("exec");

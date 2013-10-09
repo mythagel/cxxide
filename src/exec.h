@@ -38,13 +38,18 @@ struct error : std::runtime_error
     int code;
     error(const std::string& what, int code);
     error(const std::string& what);
-    virtual ~error();
+    virtual ~error() noexcept;
+};
+
+struct stream_t
+{
+    std::string in;
+    std::string out;
+    std::string err;
 };
 
 int exec(const std::string& wd, const std::vector<std::string>& args);
-int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in);
-int exec(const std::string& wd, const std::vector<std::string>& args, std::string* out);
-int exec(const std::string& wd, const std::vector<std::string>& args, const std::string& in, std::string* out);
+int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& stream);
 
 }
 }
