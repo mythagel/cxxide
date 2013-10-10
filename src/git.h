@@ -52,7 +52,6 @@ struct repo_t
 {
     std::string root;
 //    open();
-//    init();
 //    clone();
 //    
 //    push();
@@ -63,23 +62,24 @@ struct repo_t
 
     struct index_t
     {
-//        // git update-index --add -q -z --stdin < files
-//        void add();
-//        // git update-index -q -z --stdin < files
-//        void update();
-//        // git update-index --remove -q -z --stdin < files
-//        void remove();
-//        
-//        // tree=$(git write-tree)
-//        // commit=$(echo commit_msg | git commit-tree $tree)
-//        // if HEAD not valid ref
-//        // git show-ref --verify `git symbolic-ref -q HEAD`
-//        // git update-ref HEAD $commit
-//        void commit();
+        // git update-index --add -q -z --stdin < files
+        void add(const std::vector<std::string>& files);
+        // git update-index -q -z --stdin < files
+        void update();
+        // git update-index --remove -q -z --stdin < files
+        void remove();
+        
+        // tree=$(git write-tree)
+        // commit=$(echo commit_msg | git commit-tree $tree)
+        // if HEAD not valid ref
+        // git show-ref --verify `git symbolic-ref -q HEAD`
+        // git update-ref HEAD $commit
+        void commit();
     } index;
 };
 
 repo_t init(const std::string& path);
+repo_t open(const std::string& path);
 
 
 //cat-file

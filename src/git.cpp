@@ -55,6 +55,22 @@ repo_t init(const std::string& path)
     }
 }
 
+repo_t open(const std::string& path)
+{
+    try
+    {
+        system::stream_t stream;
+        int err = system::exec(path, {"git", "rev-parse", "--show-toplevel"}, &stream);
+        if(err) throw error("git: " + stream.err);
+        
+        return { stream.out };
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("git init failed"));
+    }
+}
+
 }
 }
 
