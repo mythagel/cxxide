@@ -25,27 +25,17 @@
 #include "exec.h"
 #include <cstring>
 #include <cstdlib>
-#include <errno.h>
+#include <cerrno>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <system_error>
+#include <stdexcept>
 
 namespace cxxide
 {
 namespace system
 {
-
-error::error(const std::string& what, int code)
- : std::runtime_error(what + ": " + strerror(code)), code(code)
-{
-}
-error::error(const std::string& what)
- : std::runtime_error(what), code(0)
-{
-}
-error::~error() noexcept
-{
-}
 
 namespace
 {
@@ -76,7 +66,7 @@ int exec(const std::string& wd, const std::vector<std::string>& args)
     {
         case -1:
         {
-            throw error("fork", errno);
+            throw std::system_error(errno, std::system_category(), "fork");
         }
         case 0:
         {
@@ -85,7 +75,9 @@ int exec(const std::string& wd, const std::vector<std::string>& args)
                 int err = chdir(wd.c_str());
                 if(err)
                 {
-                    perror("chdir");
+                    std::string cmd;
+                    cmd += "chdir(" + wd + ")";
+                    perror(cmd.c_str());
                     abort();
                 }
             }
@@ -101,13 +93,13 @@ int exec(const std::string& wd, const std::vector<std::string>& args)
             if(WIFEXITED(status))
                 return WEXITSTATUS(status);
             
-            throw error("Failed to exec child: ");
+            throw std::runtime_error("Abnormal child termination.");
         }
     }
     
     throw std::logic_error("exec");
 }
-int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& stream)
+int exec(const std::string& wd, const std::vector<std::string>& args, stream_t* stream)
 {
     auto argv = convert_args(args);
     
@@ -123,7 +115,7 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
     {
         case -1:
         {
-            throw error("fork", errno);
+            throw std::system_error(errno, std::system_category(), "fork");
         }
         case 0:
         {
@@ -133,7 +125,7 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
 
             dup2(infd[0], 0);
             dup2(outfd[1], 1);
-            dup2(errfd[1], 1);
+            dup2(errfd[1], 2);
 
             close(infd[0]);
             close(outfd[1]);
@@ -144,7 +136,9 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
                 int err = chdir(wd.c_str());
                 if(err)
                 {
-                    perror("chdir");
+                    std::string cmd;
+                    cmd += "chdir(" + wd + ")";
+                    perror(cmd.c_str());
                     abort();
                 }
             }
@@ -158,7 +152,7 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
             close(outfd[1]);
             close(errfd[1]);
             
-            write(infd[1], stream.in.c_str(), stream.in.size());
+            write(infd[1], stream->in.c_str(), stream->in.size());
             close(infd[1]);
             
             char buffer[2048];
@@ -166,8 +160,8 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
             {
                 ssize_t n = read(outfd[0], buffer, sizeof(buffer));
                 if(n == 0) break;
-                if(n == -1) throw error("read", errno);
-                stream.out.insert(stream.out.end(), buffer, buffer + n);
+                if(n == -1) break; // todo How to signal partial read?
+                stream->out.insert(stream->out.end(), buffer, buffer + n);
             }
             close(outfd[0]);
             
@@ -175,8 +169,8 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
             {
                 ssize_t n = read(errfd[0], buffer, sizeof(buffer));
                 if(n == 0) break;
-                if(n == -1) throw error("read", errno);
-                stream.err.insert(stream.err.end(), buffer, buffer + n);
+                if(n == -1) break; // todo How to signal partial read?
+                stream->err.insert(stream->err.end(), buffer, buffer + n);
             }
             close(errfd[0]);
             
@@ -186,9 +180,10 @@ int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& 
             if(WIFEXITED(status))
                 return WEXITSTATUS(status);
             
-            throw error("Failed to exec child: " + stream.err);
+            throw std::runtime_error("Abnormal child termination: " + stream->err);
         }
     }
+    
     throw std::logic_error("exec");
 }
 

@@ -31,7 +31,8 @@ int main()
     }
     
     cxxide::system::stream_t stream;
-    int status = cxxide::system::exec({}, {"true", ""}, stream);
+    stream.in = "hello";
+    int status = cxxide::system::exec("", {"cat"}, &stream);
     
     std::cout << "out: >>>" << stream.out << "<<<\n";
     std::cout << "err: >>>" << stream.err << "<<<\n";

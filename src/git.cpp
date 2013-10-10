@@ -44,8 +44,8 @@ repo_t init(const std::string& path)
     try
     {
         system::stream_t stream;
-        int err = system::exec(path, {"git", "init", "-q"}, stream);
-        if(err) throw error(stream.err);
+        int err = system::exec(path, {"git", "init", "-q"}, &stream);
+        if(err) throw error("git: " + stream.err);
         
         return { path };
     }

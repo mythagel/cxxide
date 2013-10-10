@@ -26,20 +26,11 @@
 #define EXEC_H_
 #include <string>
 #include <vector>
-#include <stdexcept>
 
 namespace cxxide
 {
 namespace system
 {
-
-struct error : std::runtime_error
-{
-    int code;
-    error(const std::string& what, int code);
-    error(const std::string& what);
-    virtual ~error() noexcept;
-};
 
 struct stream_t
 {
@@ -49,7 +40,7 @@ struct stream_t
 };
 
 int exec(const std::string& wd, const std::vector<std::string>& args);
-int exec(const std::string& wd, const std::vector<std::string>& args, stream_t& stream);
+int exec(const std::string& wd, const std::vector<std::string>& args, stream_t* stream);
 
 }
 }
