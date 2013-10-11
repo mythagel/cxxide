@@ -8,8 +8,11 @@ ADD_LIBRARY(system STATIC exec.cpp)
 ADD_LIBRARY(git STATIC git.cpp)
 TARGET_LINK_LIBRARIES(git system)
 
-ADD_EXECUTABLE(git_test test.cpp)
-TARGET_LINK_LIBRARIES(git_test git)
+ADD_LIBRARY(project STATIC project.cpp)
+TARGET_LINK_LIBRARIES(project git)
+
+ADD_EXECUTABLE(project_test test.cpp)
+TARGET_LINK_LIBRARIES(project_test project)
 
 #INCLUDE_DIRECTORIES()
 #ADD_EXECUTABLE(cxxide xxx);

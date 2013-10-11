@@ -1,7 +1,6 @@
 #include <iostream>
 #include <exception>
-#include "git.h"
-#include "exec.h"
+#include "project.h"
 
 void print_exception(const std::exception& e, int level = 0)
 {
@@ -21,20 +20,15 @@ void print_exception(const std::exception& e, int level = 0)
 
 int main()
 {
+    using namespace cxxide;
     try
     {
-        auto repo = cxxide::git::init("/home/nicholas/dev/build/cxxide/crap/");
+        auto project = project::create("crap", "/home/nicholas/dev/build/cxxide/projects/", "");
+        std::cout << "created project.\n";
     }
     catch(const std::exception& e)
     {
         print_exception(e);
     }
-    
-    cxxide::system::stream_t stream;
-    stream.in = "hello";
-    int status = cxxide::system::exec("", {"cat"}, &stream);
-    
-    std::cout << "out: >>>" << stream.out << "<<<\n";
-    std::cout << "err: >>>" << stream.err << "<<<\n";
     return 0;
 }
