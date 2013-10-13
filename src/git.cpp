@@ -39,19 +39,34 @@ error::~error() noexcept
 {
 }
 
-repo_t init(const std::string& path)
+auto base_opts(std::initializer_list<std::string> opts) -> std::vector<std::string>
+{
+    return opts;
+}
+
+repo_t init(const std::string& path, const init_opts& opts)
 {
     try
     {
         system::stream_t stream;
-        int err = system::exec(path, {"git", "init", "-q"}, &stream);
+        
+        auto args = base_opts({"git", "init", "-q"});
+        auto add_if = [&args](bool cond, std::initializer_list<std::string> opts) -> void
+        {
+            if(cond) args.insert(end(args), opts);
+        };
+        add_if(!opts.template_dir.empty(), {"--template", opts.template_dir});
+        add_if(opts.bare, {"--bare"});
+        add_if(!opts.separate_git_dir.empty(), {"--separate-git-dir", opts.separate_git_dir});
+        
+        int err = system::exec(path, args, &stream);
         if(err) throw error("git: " + stream.err);
         
-        return { path };
+        return { path, {} };
     }
     catch(...)
     {
-        std::throw_with_nested(error("git init failed"));
+        std::throw_with_nested(error("git::init failed"));
     }
 }
 
@@ -63,7 +78,7 @@ repo_t open(const std::string& path)
         int err = system::exec(path, {"git", "rev-parse", "--show-toplevel"}, &stream);
         if(err) throw error("git: " + stream.err);
         
-        return { stream.out };
+        return { stream.out, {} };
     }
     catch(...)
     {

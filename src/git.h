@@ -65,9 +65,9 @@ struct repo_t
         // git update-index --add -q -z --stdin < files
 //        void add(const std::vector<std::string>& files);
 //        // git update-index -q -z --stdin < files
-//        void update();
+//        void update(const std::vector<std::string>& files);
 //        // git update-index --remove -q -z --stdin < files
-//        void remove();
+//        void remove(const std::vector<std::string>& files);
 //        
 //        // tree=$(git write-tree)
 //        // commit=$(echo commit_msg | git commit-tree $tree)
@@ -78,7 +78,38 @@ struct repo_t
     } index;
 };
 
-repo_t init(const std::string& path);
+struct init_opts
+{
+    std::string template_dir;
+    bool bare;
+    /*struct shared_t
+    {
+        enum
+        {
+            false_,
+            true_,
+            umask,
+            group,
+            all,
+            world,
+            everybody,
+            octal
+        } shared;
+        int permissions;
+        
+        shared_t()
+         : shared(false_), permissions()
+        {
+        }
+    } shared;*/
+    std::string separate_git_dir;
+    
+    init_opts()
+     : template_dir(), bare()/*, shared()*/, separate_git_dir()
+    {
+    }
+};
+repo_t init(const std::string& path, const init_opts& opts = {});
 repo_t open(const std::string& path);
 
 

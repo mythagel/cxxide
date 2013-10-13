@@ -67,6 +67,12 @@ project_t create(const std::string& name, const std::string& path, const std::st
         os << "PROJECT(" << name << ")\n";
     }
     
+    {
+        std::ofstream os(root + '/' + "README.md");
+        os << name << "\n";
+        os << std::string('=', name.size()) << "\n";
+    }
+    
     // TODO commit basic project structure to git.
     
     return project;
