@@ -3,13 +3,8 @@ FIND_PACKAGE(Threads REQUIRED)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
 
-ADD_LIBRARY(system STATIC exec.cpp)
-
-ADD_LIBRARY(git STATIC git.cpp)
-TARGET_LINK_LIBRARIES(git system)
-
-ADD_LIBRARY(project STATIC project.cpp)
-TARGET_LINK_LIBRARIES(project git)
+ADD_LIBRARY(project STATIC project.cpp exec.cpp git.cpp cmake.cpp)
+TARGET_LINK_LIBRARIES(project)
 
 ADD_EXECUTABLE(project_test test.cpp)
 TARGET_LINK_LIBRARIES(project_test project)

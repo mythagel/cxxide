@@ -29,53 +29,119 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
+#include <cstdio>
+#include <exception>
 
 namespace cxxide
 {
 namespace project
 {
 
+error::error(const std::string& what)
+ : std::runtime_error(what)
+{
+}
+error::~error() noexcept
+{
+}
+
+project_t::~project_t()
+{
+}
+
+struct create_directory_nx
+{
+    bool release;
+    std::string path;
+    
+    create_directory_nx(const std::string& base, const std::string& dir)
+     : release(true)
+    {
+        int err;
+        struct stat sb;
+        
+        if(base.back() == '/')
+            path = base + dir;
+        else
+            path = base + '/' + dir;
+        
+        err = stat(path.c_str(), &sb);
+        if(!err)
+            throw std::runtime_error("Project folder already exists.");
+
+        err = mkdir(path.c_str(), 0777);
+        if(err)
+            throw std::system_error(errno, std::system_category(), std::string("mkdir: ") + path);
+    }
+    
+    void dismiss()
+    {
+        release = false;
+    }
+    
+    std::string child(const std::string& file)
+    {
+        return path + '/' + file;
+    }
+    
+    ~create_directory_nx()
+    {
+        if(release)
+        {
+            // TODO recursive
+            int err = rmdir(path.c_str());
+            if(err)
+            {
+                fprintf(stderr, "Unable to remove path '%s'\n", path.c_str());
+            }
+        }
+    }
+};
+
 project_t create(const std::string& name, const std::string& path, const std::string& build_path)
 {
-    int err;
-    struct stat sb;
-    err = stat(path.c_str(), &sb);
-    if(err)
-        throw std::system_error(errno, std::system_category(), std::string("stat: ") + path);
-    
-    project_t project;
-    
-    std::string root;
-    if(path.back() == '/')
-        root = path + name;
-    else
-        root = path + '/' + name;
-    
-    err = stat(root.c_str(), &sb);
-    if(!err)
-        throw std::runtime_error("Project folder already exists.");
+    if(name.empty())
+        throw error("project name empty");
+    if(path.empty())
+        throw error("source path empty");
+    if(build_path.empty())
+        throw error("build path empty");
 
-    err = mkdir(root.c_str(), 0777);
-    if(err)
-        throw std::system_error(errno, std::system_category(), "mkdir");
-
-    project.repo = git::init(root.c_str());
-
-    {    
-        std::ofstream os(root + '/' + "CMakeLists.txt");
-        os << "CMAKE_MINIMUM_REQUIRED(VERSION 2.6)\n";
-        os << "PROJECT(" << name << ")\n";
-    }
-    
+    try
     {
-        std::ofstream os(root + '/' + "README.md");
-        os << name << "\n";
-        os << std::string('=', name.size()) << "\n";
+        int err;
+        struct stat sb;
+        err = stat(path.c_str(), &sb);
+        if(err)
+            throw std::system_error(errno, std::system_category(), std::string("stat: ") + path);
+        
+        project_t project;
+        
+        create_directory_nx root(path, name);
+        create_directory_nx build_root(build_path, name);
+
+        project.repo = git::init(root.path.c_str());
+        project.config = cmake::create(name, root.path, build_root.path);
+
+        {
+            std::ofstream os(root.child("README.md"));
+            os << name << "\n";
+            os << std::string('=', name.size()) << "\n";
+        }
+        
+        // TODO commit basic project structure to git.
+        
+        root.dismiss();
+        build_root.dismiss();
+
+        project.config.configure();
+        
+        return project;
     }
-    
-    // TODO commit basic project structure to git.
-    
-    return project;
+    catch(...)
+    {
+        std::throw_with_nested(error("project::create failed"));
+    }
 }
 
 }

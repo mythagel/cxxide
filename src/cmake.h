@@ -25,20 +25,34 @@
 #ifndef CMAKE_H_
 #define CMAKE_H_
 #include <string>
+#include <stdexcept>
 
-namespace build
+namespace cxxide
+{
+namespace cmake
 {
 
-class cmake
+struct error : std::runtime_error
 {
+    error(const std::string& what);
+    virtual ~error() noexcept;
+};
+
+class project_t
+{
+friend project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);;
+
 private:
     std::string source_path;
     std::string build_path;
 public:
-    configure();
-    build();
+    void configure();
+    void build();
 };
 
+project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
+
+}
 }
 
 #endif /* CMAKE_H_ */

@@ -23,7 +23,7 @@ int main()
     using namespace cxxide;
     try
     {
-        auto project = project::create("crap", "/home/nicholas/dev/build/cxxide/projects/", "");
+        auto project = project::create("crap", "/home/nicholas/dev/build/cxxide/projects/", "/home/nicholas/dev/build/cxxide/projects/build/");
         std::cout << "created project.\n";
     }
     catch(const std::exception& e)

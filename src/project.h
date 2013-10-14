@@ -26,17 +26,30 @@
 #define PROJECT_H_
 #include <string>
 #include "git.h"
+#include "cmake.h"
+#include <stdexcept>
 
 namespace cxxide
 {
 namespace project
 {
 
-struct project_t
+struct error : std::runtime_error
 {
+    error(const std::string& what);
+    virtual ~error() noexcept;
+};
+
+class project_t
+{
+friend project_t create(const std::string& name, const std::string& path, const std::string& build_path);
+
+private:
     std::string name;
     git::repo_t repo;
+    cmake::project_t config;
     std::string build_path;
+public:
 //    // dvcs
 //    push();
 //    pull();
@@ -45,11 +58,11 @@ struct project_t
 //    merge();
 //    
 //    // build
-//    configure();
-//    build();
+//    void configure();
+//    void build();
 //    
 //    // code insight
-    
+    ~project_t();
 };
 
 /*
