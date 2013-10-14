@@ -131,11 +131,12 @@ project_t create(const std::string& name, const std::string& path, const std::st
         
         // TODO commit basic project structure to git.
         
+        project.config.configure();
+        project.config.build();
+        
         root.dismiss();
         build_root.dismiss();
 
-        project.config.configure();
-        
         return project;
     }
     catch(...)

@@ -59,6 +59,19 @@ void project_t::configure()
 }
 void project_t::build()
 {
+    try
+    {
+        system::stream_t stream;
+        
+        auto args = std::vector<std::string>({"cmake", "--build", build_path});
+        
+        int err = system::exec(build_path, args, &stream);
+        if(err) throw error("cmake: " + stream.err);
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("git::init failed"));
+    }
 }
 
 project_t create(const std::string& name, const std::string& source_path, const std::string& build_path)
