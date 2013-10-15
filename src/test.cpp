@@ -1,6 +1,8 @@
 #include <iostream>
 #include <exception>
 #include "project.h"
+#include <string>
+#include <vector>
 
 void print_exception(const std::exception& e, int level = 0)
 {
@@ -18,13 +20,27 @@ void print_exception(const std::exception& e, int level = 0)
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    std::vector<std::string> args(argv, argv + argc);
+    args.erase(args.begin());
+    
+    std::string project_name;
+    if(!args.empty())
+    {
+        project_name = args[0];
+    }
+    else
+    {
+        std::cerr << "Must specify project name to create.\n";
+        return 1;
+    }
+
     using namespace cxxide;
     try
     {
-        auto project = project::create("crap", "/home/nicholas/dev/build/cxxide/projects/", "/home/nicholas/dev/build/cxxide/projects/build/");
-        std::cout << "created project.\n";
+        auto project = project::create(project_name, "/home/nicholas/dev/build/cxxide/projects/", "/home/nicholas/dev/build/cxxide/projects/build/");
+        std::cout << "Created project '" << project_name << "'.\n";
     }
     catch(const std::exception& e)
     {

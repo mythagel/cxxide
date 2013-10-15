@@ -71,7 +71,7 @@ struct create_directory_nx
 
         err = mkdir(path.c_str(), 0777);
         if(err)
-            throw std::system_error(errno, std::system_category(), std::string("mkdir: ") + path);
+            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + ")");
     }
     
     void dismiss()
@@ -113,7 +113,7 @@ project_t create(const std::string& name, const std::string& path, const std::st
         struct stat sb;
         err = stat(path.c_str(), &sb);
         if(err)
-            throw std::system_error(errno, std::system_category(), std::string("stat: ") + path);
+            throw std::system_error(errno, std::system_category(), std::string("stat(") + path + ")");
         
         project_t project;
         
