@@ -46,6 +46,22 @@ git provides
 
 
 cmake provides
+ - 2 variants
+    - managed
+       - Subset of cmake language
+       - this is to cmake as DSC is to Postscript
+          - except without interpreted comments if at all possible
+       - command case configuration
+       - Automatically managed
+       - new source file updates source target list for selected target.
+       - new source folder creates and references new list file.
+    - unmanaged
+       - Generic CMakeLists.txt usage
+       - No GUI control
+       - No automatic editing
+       - After adding source files - must update manually
+       - Adding new source folders must update manually
+       - Anything - must update manually
  - list of compile commands, list of sources + target mapping
  - ability to regenerate above
  - ability to build project (--build)
