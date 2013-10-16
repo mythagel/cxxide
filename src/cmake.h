@@ -38,6 +38,11 @@ struct error : std::runtime_error
     virtual ~error() noexcept;
 };
 
+struct listfile_t
+{
+    std::vector<std::string> packages;
+};
+
 class project_t
 {
 friend project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);;
