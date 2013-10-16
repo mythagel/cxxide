@@ -1,6 +1,8 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(example)
 
+##<< Managed Configuration >>##
+
 #Project wide (top level CMakeLists.txt only)
 ##<< Referenced Packages >>##
 FIND_PACKAGE(Foo)
@@ -106,7 +108,7 @@ FUNCTION(DECLARE_TARGET target_name)
     ENDIF()
 ENDFUNCTION()
 
-##<< Folder Properties >>##
+##<< Directory Properties >>##
 ADD_DEFINITIONS(-DFOO -DBAR ...)
 INCLUDE_DIRECTORIES(dir1 dir2 ...)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
@@ -115,7 +117,7 @@ CONFIGURE_FILE(<input1> <output1>)
 CONFIGURE_FILE(<input2> <output2>)
 ADD_SUBDIRECTORY(blah1)
 ADD_SUBDIRECTORY(blah2)
-##<< Folder Properties >>##
+##<< Directory Properties >>##
 
 ##<< File Properties >>##
 SET_PROPERTY(SOURCE a.cpp APPEND PROPERTY COMPILE_DEFINITIONS -DBLAH)
@@ -130,13 +132,13 @@ set(FOO_SOURCES
 a.cpp 
 b.cpp 
 c.cpp)
+set(FOO_DEPENDS bar)
 set(FOO_DEFINES -DBLAH -DBLEH)
 set(FOO_INCLUDES ${PROJECT_SOURCE_DIR}/include /usr/local/include)
 set(FOO_COMPILEFLAGS -Wall -Wextra -std=c++11)
-set(FOO_LIBS m)
 set(FOO_LINKFLAGS -fPIC)
+set(FOO_LIBS m)
 set(FOO_PACKAGES Bar Baz)
-set(FOO_DEPENDS bar)
 DECLARE_TARGET(foo)
 ##<< Target 'foo' >>##
 
