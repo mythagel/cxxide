@@ -8,7 +8,10 @@ FIND_PACKAGE(Bar)
 FIND_PACKAGE(Baz)
 ##<< Referenced Packages >>##
 
-FUNCTION(ADD_TARGET target_name)
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+include(DeclTarget) # cmake/Modules/DeclTarget.cmake
+FUNCTION(DECLARE_TARGET target_name)
     STRING(TOUPPER "${target_name}" TARGET)
 
     IF("${TARGET}_TYPE" STREQUAL "EXECUTABLE")
@@ -54,15 +57,15 @@ FUNCTION(ADD_TARGET target_name)
     IF(DEFINED "${TARGET}_COMPILEFLAGS")
         SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY COMPILE_FLAGS "${TARGET}_COMPILEFLAGS")
     ENDIF()
+
+    IF(DEFINED "${TARGET}_LINKFLAGS")
+        SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS "${TARGET}_LINKFLAGS")
+    ENDIF()
     
     FOREACH(library ${TARGET}_LIBS)
         FIND_LIBRARY("${library}" ${library})
-        TARGET_LINK_LIBRARIES(${target_name} ${${library}})
+        LIST(APPEND "${TARGET}_RESOLVED_LIBS" ${${library}})
     ENDFOREACH()
-    
-    IF(DEFINED "${TARGET}_LINKFLAGS")
-        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY LINK_FLAGS "${TARGET}_LINKFLAGS")
-    ENDIF()
     
     FOREACH(package ${TARGET}_PACKAGES)
         STRING(TOUPPER "${package}" upper_package)
@@ -87,19 +90,22 @@ FUNCTION(ADD_TARGET target_name)
         ENDIF()
         
         IF(DEFINED "${PKG}_LIBRARIES")
-            TARGET_LINK_LIBRARIES(${target_name} ${PKG}_LIBRARIES)
+            LIST(APPEND "${TARGET}_RESOLVED_LIBS" ${PKG}_LIBRARIES)
         ELSEIF(DEFINED "${PKG}_LIBRARY")
-            TARGET_LINK_LIBRARIES(${target_name} ${PKG}_LIBRARY)
+            LIST(APPEND "${TARGET}_RESOLVED_LIBS" ${PKG}_LIBRARY)
         ENDIF()
         
     ENDFOREACH()
+    
+    IF(DEFINED "RESOLVED_LIBS")
+        TARGET_LINK_LIBRARIES(${target_name} ${TARGET}_RESOLVED_LIBS)
+    ENDIF()
     
     IF(DEFINED "${TARGET}_DEPENDS")
         ADD_DEPENDENCIES(${target_name} ${TARGET}_DEPENDS)
     ENDIF()
 ENDFUNCTION()
 
-#Source folder (incl top level)
 ##<< Folder Properties >>##
 ADD_DEFINITIONS(-DFOO -DBAR ...)
 INCLUDE_DIRECTORIES(dir1 dir2 ...)
@@ -116,34 +122,22 @@ SET_PROPERTY(SOURCE a.cpp APPEND PROPERTY COMPILE_DEFINITIONS -DBLAH)
 SET_PROPERTY(SOURCE a.cpp APPEND_STRING PROPERTY COMPILE_FLAGS "-Wall -Wextra")
 ##<< File Properties >>##
 
-#Target
 ##<< Target 'foo' >>##
 set(FOO_LABEL "Foo Library")
-#PROJECT_LABEL
 set(FOO_TYPE EXECUTABLE SHARED_LIBRARY STATIC_LIBRARY)
 set(FOO_VERSION 0.0.0)
-#SET_PROPERTY(TARGET foo PROPERTY SOVERSION 0)
-#SET_PROPERTY(TARGET foo PROPERTY VERSION 0.0.0)
-
-#SOURCES
 set(FOO_SOURCES 
 a.cpp 
 b.cpp 
 c.cpp)
-#DEFINES (-DBLAH)
 set(FOO_DEFINES -DBLAH -DBLEH)
-#INCLUDES (/usr/local/include/)
 set(FOO_INCLUDES ${PROJECT_SOURCE_DIR}/include /usr/local/include)
-#COMPILE FLAGS (-Wall -Wextra -fPIC STANDARD c++98 c++03 c++11 c89 c99 c11)
 set(FOO_COMPILEFLAGS -Wall -Wextra -std=c++11)
-#LIBRARIES
-# use find_library
 set(FOO_LIBS m)
-#LINK FLAGS
 set(FOO_LINKFLAGS -fPIC)
 set(FOO_PACKAGES Bar Baz)
 set(FOO_DEPENDS bar)
-ADD_TARGET(foo)
+DECLARE_TARGET(foo)
 ##<< Target 'foo' >>##
 
 

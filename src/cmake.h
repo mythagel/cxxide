@@ -38,10 +38,27 @@ struct error : std::runtime_error
     virtual ~error() noexcept;
 };
 
-struct listfile_t
-{
-    std::vector<std::string> packages;
-};
+// Not correct yet...
+//struct listfile_t
+//{
+//    std::vector<std::string> packages;
+//    struct dir_t
+//    {
+//        std::vector<std::string> defines;
+//        std::vector<std::string> includes;
+//        std::string cxx_flags;
+//        std::string c_flags;
+//        struct configure_file_t
+//        {
+//            std::string input;
+//            std::string output;
+//        };
+//        std::vector<configure_file_t> configure_files;
+//        std::map<std::string, dir_t> subdirectories;
+//    };
+//    
+//    dir_t main;
+//};
 
 class project_t
 {
