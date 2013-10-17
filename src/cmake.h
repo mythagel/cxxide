@@ -1,4 +1,4 @@
-/* cxxcam - C++ CAD/CAM driver library.
+/* 
  * Copyright (C) 2013  Nicholas Gill
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <map>
 #include <stdexcept>
 
 namespace cxxide
@@ -48,8 +47,6 @@ struct configuration_t
     
     struct managed_t
     {
-        std::set<std::string> packages;
-        
         struct directory_t
         {
             std::vector<std::string> definitions;
@@ -97,8 +94,11 @@ struct configuration_t
             };
             std::vector<target_t> targets;
             
-            std::map<std::string, directory_t> subdirectories;
+            std::vector<std::pair<std::string, directory_t>> subdirectories;
         };
+        
+        std::set<std::string> packages;
+        directory_t directory;
     };
     
     managed_t config;

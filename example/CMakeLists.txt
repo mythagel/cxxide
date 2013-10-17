@@ -124,7 +124,8 @@ SET_PROPERTY(SOURCE a.cpp APPEND PROPERTY COMPILE_DEFINITIONS -DBLAH)
 SET_PROPERTY(SOURCE a.cpp APPEND_STRING PROPERTY COMPILE_FLAGS "-Wall -Wextra")
 ##<< File Properties >>##
 
-##<< Target 'foo' >>##
+##<< Target Properties >>##
+set(FOO_NAME "foo")
 set(FOO_LABEL "Foo Library")
 set(FOO_TYPE EXECUTABLE SHARED_LIBRARY STATIC_LIBRARY)
 set(FOO_VERSION 0.0.0)
@@ -139,7 +140,7 @@ set(FOO_COMPILEFLAGS -Wall -Wextra -std=c++11)
 set(FOO_LINKFLAGS -fPIC)
 set(FOO_LIBS m)
 set(FOO_PACKAGES Bar Baz)
-DECLARE_TARGET(foo)
-##<< Target 'foo' >>##
+DECLARE_TARGET(${FOO_NAME})
+##<< Target Properties >>##
 
 

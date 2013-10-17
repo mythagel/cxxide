@@ -1,4 +1,4 @@
-/* cxxcam - C++ CAD/CAM driver library.
+/* 
  * Copyright (C) 2013  Nicholas Gill
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -54,9 +54,10 @@ private:
     std::ostream& os;
     const configuration_t& config;
     bool is_managed;
+    bool skip;
 public:
     list_rewriter_t(std::ostream& os, const configuration_t& config)
-     : os(os), config(config), is_managed(false)
+     : os(os), config(config), is_managed(false), skip(false)
     {
     }
 
@@ -65,38 +66,100 @@ public:
         return is_managed;
     }
 
-    virtual void whitespace(const char* c, const char* end)
+    void whitespace(const char* c, const char* end) override
     {
+        if(skip) return;
         os << std::string(c, end);
     }
-    virtual void comment(const char* c, const char* end)
+    void comment(const char* c, const char* end) override
     {
         auto cmt = std::string(c, end);
-        os << '#' << cmt;
-        if(cmt == "#<< Managed Configuration >>##")
-            is_managed = true;
+        
+        if(cmt.find("#<< ") == 0)
+        {
+            if(cmt == "#<< Managed Configuration >>##")
+            {
+                is_managed = true;
+            }
+            else if(cmt == "#<< Referenced Packages >>##")
+            {
+                if(skip)
+                {
+                    os << "\n";
+                    // Have been ignoring content - time to replace.
+                    // output stream is between start tag and end tag below.
+                    // generate content and write.
+                    os << "Generated content here!";
+                    os << "\n";
+                }
+                skip = !skip;
+            }
+            else if(cmt == "#<< Directory Properties >>##")
+            {
+                if(skip)
+                {
+                    os << "\n";
+                    os << "Generated content here!";
+                    os << "\n";
+                }
+                skip = !skip;
+            }
+            else if(cmt == "#<< File Properties >>##")
+            {
+                if(skip)
+                {
+                    os << "\n";
+                    os << "Generated content here!";
+                    os << "\n";
+                }
+                skip = !skip;
+            }
+            else if(cmt == "#<< Target Properties >>##")
+            {
+                if(skip)
+                {
+                    os << "\n";
+                    os << "Generated content here!";
+                    os << "\n";
+                }
+                skip = !skip;
+            }
+            
+            os << '#' << cmt;
+        }
+        else
+        {
+            if(skip) return;
+            os << '#' << cmt;
+        }
     }
-    virtual void begin_command(const char* c, const char* end)
+    void begin_command(const char* c, const char* end) override
     {
+        if(skip) return;
         os << std::string(c, end);
     }
-    virtual void open_bracket()
+    void open_bracket() override
     {
+        if(skip) return;
         os << '(';
     }
-    virtual void close_bracket()
+    void close_bracket() override
     {
+        if(skip) return;
         os << ')';
     }
-    virtual void argument(const char* c, const char* end, bool quoted)
+    void argument(const char* c, const char* end, bool quoted) override
     {
+        if(skip) return;
+        
         if(quoted)
             os << '"' << std::string(c, end) << '"';
         else
             os << std::string(c, end);
     }
-    virtual void end_command()
+    void end_command() override
     {
+        if(skip) return;
         // ni
     }
 
