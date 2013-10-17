@@ -44,65 +44,59 @@ struct configuration_t
 {
     std::string name;
     bool managed;
-    
-    struct managed_t
+
+    struct directory_t
     {
-        struct directory_t
+        std::vector<std::string> definitions;
+        std::vector<std::string> includes;
+        struct
         {
+            std::string cxx;
+            std::string c;
+        } compile_flags;
+        
+        struct configure_file_t
+        {
+            std::string input;
+            std::string output;
+        };
+        std::vector<configure_file_t> configure_files;
+        
+        struct file_t
+        {
+            std::string name;
+            std::vector<std::string> definitions;
+            std::string compile_flags;
+        };
+        std::vector<file_t> files;
+        
+        struct target_t
+        {
+            std::string name;
+            std::string label;
+            enum type_t
+            {
+                executable,
+                shared_library,
+                static_library
+            } type;
+            std::string version;
+            std::vector<std::string> sources;
+            std::vector<std::string> depends;
             std::vector<std::string> definitions;
             std::vector<std::string> includes;
-            struct
-            {
-                std::string cxx;
-                std::string c;
-            } compile_flags;
-            
-            struct configure_file_t
-            {
-                std::string input;
-                std::string output;
-            };
-            std::vector<configure_file_t> configure_files;
-            
-            struct file_t
-            {
-                std::string name;
-                std::vector<std::string> definitions;
-                std::string compile_flags;
-            };
-            std::vector<file_t> files;
-            
-            struct target_t
-            {
-                std::string name;
-                std::string label;
-                enum type_t
-                {
-                    executable,
-                    shared_library,
-                    static_library
-                } type;
-                std::string version;
-                std::vector<std::string> sources;
-                std::vector<std::string> depends;
-                std::vector<std::string> definitions;
-                std::vector<std::string> includes;
-                std::string compile_flags;
-                std::string link_flags;
-                std::vector<std::string> libs;
-                std::vector<std::string> packages;
-            };
-            std::vector<target_t> targets;
-            
-            std::vector<std::pair<std::string, directory_t>> subdirectories;
+            std::string compile_flags;
+            std::string link_flags;
+            std::vector<std::string> libs;
+            std::vector<std::string> packages;
         };
+        std::vector<target_t> targets;
         
-        std::set<std::string> packages;
-        directory_t directory;
+        std::vector<std::pair<std::string, directory_t>> subdirectories;
     };
     
-    managed_t config;
-    
+    std::set<std::string> packages;
+    directory_t directory;    
     
     configuration_t();
 };

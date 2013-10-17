@@ -29,6 +29,11 @@
 #include <exception>
 #include <iterator>
 #include "listparser.h"
+#include <unistd.h>
+#include <cstdio>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <system_error>
 
 namespace cxxide
 {
@@ -86,11 +91,8 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    // Have been ignoring content - time to replace.
-                    // output stream is between start tag and end tag below.
-                    // generate content and write.
-                    os << "Generated content here!";
-                    os << "\n";
+                    for(auto& package : config.packages)
+                        os << "FIND_PACKAGE(" << package << ")\n";
                 }
                 skip = !skip;
             }
@@ -99,8 +101,7 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!";
-                    os << "\n";
+                    os << "Generated content here!\n";
                 }
                 skip = !skip;
             }
@@ -109,8 +110,7 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!";
-                    os << "\n";
+                    os << "Generated content here!\n";
                 }
                 skip = !skip;
             }
@@ -119,8 +119,7 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!";
-                    os << "\n";
+                    os << "Generated content here!\n";
                 }
                 skip = !skip;
             }
@@ -171,8 +170,6 @@ void write(const std::string& root_path, const configuration_t& config)
     if(!config.managed)
         throw error("Invalid attempt to write unmanaged configuration.");
     /*
-    if configuration unmanaged - throw error - should not have been called.
-    
     read all CMakeLsits files referenced in configuration
     check all files are managed (master has tag and all parsable) - if not throw error
     
@@ -187,22 +184,31 @@ void write(const std::string& root_path, const configuration_t& config)
     try
     {
         std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        if(!ifs)
+            throw error("Unable to open CMakeLists.txt");
         std::noskipws(ifs);
         
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
         
-        std::ofstream os(root_path + "/CMakeLists.txt.new");
+        std::ofstream os(root_path + "/CMakeLists.txt.tmp");
+        if(!os)
+            throw error("Unable to open CMakeLists.txt.tmp");
         list_rewriter_t rewrite(os, config);
         
         auto c = source.c_str();
         auto end = c + source.size();
         
-        // Parses CMakeLists.txt and writes content into CMakeLists.txt.new
+        // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
         rewrite.parse(c, end);
         
         if(rewrite.managed())
         {
-            // TODO atomic rename
+            // update subdirs
+            
+            // TODO recursize rename tmp -> actual
+//            int err = rename(const char *oldpath, const char *newpath);
+//            if(err)
+//                throw std::system_error(errno, std::system_category(), "rename");
         }
         else
         {
@@ -211,6 +217,7 @@ void write(const std::string& root_path, const configuration_t& config)
     }
     catch(...)
     {
+//        unlink((root_path + "/CMakeLists.txt.tmp").c_str());
         std::throw_with_nested(error("cmake::write failed"));
     }
 }
@@ -253,10 +260,135 @@ project_t create(const std::string& name, const std::string& source_path, const 
     project_t project;
     project.source_path = source_path;
     project.build_path = build_path;
-    
-    std::ofstream os(source_path + '/' + "CMakeLists.txt");
-    os << "CMAKE_MINIMUM_REQUIRED(VERSION 2.6)\n";
-    os << "PROJECT(" << name << ")\n";
+
+    {
+        std::ofstream os(source_path + '/' + "CMakeLists.txt");
+        os << "CMAKE_MINIMUM_REQUIRED(VERSION 2.8)\n";
+        os << "PROJECT(" << name << ")\n";
+        os << "\n";
+        os << "##<< Managed Configuration >>##\n";
+        os << "SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\")\n";
+        os << "include(DeclTarget)\n";
+        os << "\n";
+        os << "##<< Referenced Packages >>##\n";
+        os << "##<< Referenced Packages >>##\n";
+        os << "\n";
+        os << "##<< Directory Properties >>##\n";
+        os << "##<< Directory Properties >>##\n";
+        os << "\n";
+        os << "##<< File Properties >>##\n";
+        os << "##<< File Properties >>##\n";
+        os << "\n";
+        os << "##<< Target Properties >>##\n";
+        os << "##<< Target Properties >>##\n";
+        os << "\n";
+    }
+
+    {
+        int err;
+        err = mkdir((source_path + '/' + "cmake").c_str(), 0777);
+        if(err)
+            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + ")");
+        err = mkdir((source_path + '/' + "cmake" + '/' + "Modules").c_str(), 0777);
+        if(err)
+            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + '/' + "Modules" + ")");
+
+        std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "DeclTarget.cmake");
+        os << "FUNCTION(DECLARE_TARGET target_name)\n";
+        os << "STRING(TOUPPER \"${target_name}\" TARGET)\n";
+        os << "\n";
+        os << "IF(\"${TARGET}_TYPE\" STREQUAL \"EXECUTABLE\")\n";
+        os << "    ADD_EXECUTABLE(\"${target_name}\" ${TARGET}_SOURCES)\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
+        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
+        os << "    ENDIF()\n";
+        os << "\n";
+        os << "ELSEIF(\"${TARGET}_TYPE\" STREQUAL \"SHARED_LIBRARY\")\n";
+        os << "    ADD_LIBRARY(\"${target_name}\" SHARED ${TARGET}_SOURCES)\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
+        os << "        STRING(REPLACE \".\" \";\" VERSION \"${TARGET}_VERSION\")\n";
+        os << "        list(GET ${VERSION} 0 VERSION_MAJOR)\n";
+        os << "        SET_PROPERTY(TARGET foo PROPERTY SOVERSION ${VERSION_MAJOR})\n";
+        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
+        os << "    ENDIF()\n";
+        os << "\n";
+        os << "ELSEIF(\"${TARGET}_TYPE\" STREQUAL \"STATIC_LIBRARY\")\n";
+        os << "    ADD_LIBRARY(\"${target_name}\" STATIC ${TARGET}_SOURCES)\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
+        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
+        os << "    ENDIF()\n";
+        os << "\n";
+        os << "ELSE()\n";
+        os << "    MESSAGE(FATAL_ERROR \"Unknown target type '${TARGET}_TYPE' in target '${target_name}'\")\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_LABEL\")\n";
+        os << "    SET_PROPERTY(TARGET ${target_name} PROPERTY PROJECT_LABEL \"${TARGET}_LABEL\")\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_DEFINES\")\n";
+        os << "    SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY COMPILE_DEFINITIONS ${TARGET}_DEFINES)\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_INCLUDES\")\n";
+        os << "    SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${TARGET}_INCLUDES)\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_COMPILEFLAGS\")\n";
+        os << "    SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY COMPILE_FLAGS \"${TARGET}_COMPILEFLAGS\")\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_LINKFLAGS\")\n";
+        os << "    SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS \"${TARGET}_LINKFLAGS\")\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "FOREACH(library ${TARGET}_LIBS)\n";
+        os << "    FIND_LIBRARY(\"${library}\" ${library})\n";
+        os << "    LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${${library}})\n";
+        os << "ENDFOREACH()\n";
+        os << "\n";
+        os << "FOREACH(package ${TARGET}_PACKAGES)\n";
+        os << "    STRING(TOUPPER \"${package}\" upper_package)\n";
+        os << "\n";    
+        os << "    IF(\"${package}_FOUND\")\n";
+        os << "        SET(PKG ${package})\n";
+        os << "    ELSEIF(\"${upper_package}_FOUND\")\n";
+        os << "        SET(PKG ${upper_package})\n";
+        os << "    ELSE()\n";
+        os << "        # Not actually an accurate message - more accurate is that it is not recognised.\n";
+        os << "        MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${target_name} NOTFOUND or UNRESOLVED'\")\n";
+        os << "    ENDIF()\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
+        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY COMPILE_DEFINITIONS ${PKG}_DEFINITIONS)\n";
+        os << "    ENDIF()\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
+        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIRS)\n";
+        os << "    ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
+        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIR)\n";
+        os << "    ENDIF()\n";
+        os << "\n";    
+        os << "    IF(DEFINED \"${PKG}_LIBRARIES\")\n";
+        os << "        LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${PKG}_LIBRARIES)\n";
+        os << "    ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
+        os << "        LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${PKG}_LIBRARY)\n";
+        os << "    ENDIF()\n";
+        os << "\n";    
+        os << "ENDFOREACH()\n";
+        os << "\n";
+        os << "IF(DEFINED \"RESOLVED_LIBS\")\n";
+        os << "    TARGET_LINK_LIBRARIES(${target_name} ${TARGET}_RESOLVED_LIBS)\n";
+        os << "ENDIF()\n";
+        os << "\n";
+        os << "IF(DEFINED \"${TARGET}_DEPENDS\")\n";
+        os << "    ADD_DEPENDENCIES(${target_name} ${TARGET}_DEPENDS)\n";
+        os << "ENDIF()\n";
+        os << "ENDFUNCTION()\n";
+    }
 
     return project;
 }
