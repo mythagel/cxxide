@@ -41,6 +41,8 @@ int main(int argc, char* argv[])
     {
         auto project = project::create(project_name, "/home/nicholas/dev/build/cxxide/projects/", "/home/nicholas/dev/build/cxxide/projects/build/");
         std::cout << "Created project '" << project_name << "'.\n";
+        
+        cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, cmake::configuration_t());
     }
     catch(const std::exception& e)
     {

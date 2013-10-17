@@ -25,6 +25,9 @@
 #ifndef CMAKE_H_
 #define CMAKE_H_
 #include <string>
+#include <vector>
+#include <set>
+#include <map>
 #include <stdexcept>
 
 namespace cxxide
@@ -38,10 +41,11 @@ struct error : std::runtime_error
     virtual ~error() noexcept;
 };
 
-struct configuration
+struct configuration_t
 {
     std::string name;
     bool managed;
+    
     struct managed_t
     {
         std::set<std::string> packages;
@@ -73,7 +77,7 @@ struct configuration
             
             struct target_t
             {
-                std::::string name;
+                std::string name;
                 std::string label;
                 enum type_t
                 {
@@ -98,29 +102,12 @@ struct configuration
     };
     
     managed_t config;
+    
+    
+    configuration_t();
 };
 
-// Not correct yet...
-//struct listfile_t
-//{
-//    std::vector<std::string> packages;
-//    struct dir_t
-//    {
-//        std::vector<std::string> defines;
-//        std::vector<std::string> includes;
-//        std::string cxx_flags;
-//        std::string c_flags;
-//        struct configure_file_t
-//        {
-//            std::string input;
-//            std::string output;
-//        };
-//        std::vector<configure_file_t> configure_files;
-//        std::map<std::string, dir_t> subdirectories;
-//    };
-//    
-//    dir_t main;
-//};
+void write(const std::string& root_path, const configuration_t& config);
 
 class project_t
 {
