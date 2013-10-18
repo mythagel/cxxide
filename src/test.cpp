@@ -93,6 +93,7 @@ int main(int argc, char* argv[])
         cmake::configuration_t config;
         config.name = project_name;
         config.packages.insert("Boost");
+        config.packages.insert("X11");
         
         config.directory.definitions.push_back("-DBLAH");
         config.directory.includes.push_back("/usr/local/include/");
@@ -101,6 +102,24 @@ int main(int argc, char* argv[])
         config.directory.configure_files.push_back({"blah.cpp.in", "blah.cpp"});
         
         config.directory.files.push_back({"blah.cpp", {"-DBLEH", "-DFOO"}, "-Wall -Wextra"});
+        
+        cmake::configuration_t::directory_t::target_t foo;
+        foo.name = "foo";
+        foo.label = "Foo executable";
+        foo.type = cmake::configuration_t::directory_t::target_t::executable;
+        foo.version = "1.2.3";
+        foo.sources = {"a.cpp", "b.cpp", "c.cpp"};
+        foo.depends = {"foo"};
+        foo.definitions = {"-DFOOFOO", "-DFOOBAR"};
+        foo.includes = {"foo", "/usr/include/foo/"};
+        foo.compile_flags = "-Wno-unused-parameters";
+        foo.link_flags = "-fPIC";
+        foo.libs = {"m", "pthread"};
+        foo.packages = {"Boost", "X11"};
+        config.directory.targets.push_back(foo);
+        
+//        FAILED: /usr/bin/c++   -D-DFOOBAR -D-DFOOFOO -DBLAH -std=c++11 -I/usr/local/include -IBoost_INCLUDE_DIRS -IX11_INCLUDE_DIR -Ifoo -I/usr/include/foo    -Wno-unused-parameters -MMD -MT CMakeFiles/foo.dir/c.cpp.o -MF "CMakeFiles/foo.dir/c.cpp.o.d" -o CMakeFiles/foo.dir/c.cpp.o -c /home/nicholas/dev/build/cxxide/projects/example/c.cpp
+
         
         mkdir((std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name + "/src").c_str(), 0777);
         config.directory.subdirectories.push_back({"src", {}});

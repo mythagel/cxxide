@@ -162,7 +162,82 @@ public:
                     os << "\n";
                     for(auto& target : directory.targets)
                     {
-                        os << "TODO Generated content here!\n";
+                        std::string target_var = target.name;
+                        boost::to_upper(target_var);
+                        
+                        if(!target.sources.empty())
+                        {
+                            os << "SET( " << target_var << "_SOURCES ";
+                            for(auto& source : target.sources)
+                                os << "\n    " << source << " ";
+                            os << ")\n";
+                        }
+                        
+                        switch(target.type)
+                        {
+                            case configuration_t::directory_t::target_t::executable:
+                                os << "ADD_EXECUTABLE( " << target.name << " ${" << target_var << "_SOURCES} )\n";
+                                break;
+                            case configuration_t::directory_t::target_t::shared_library:
+                                os << "ADD_LIBRARY( " << target.name << " SHARED ${" << target_var << "_SOURCES} )\n";
+                                break;
+                            case configuration_t::directory_t::target_t::static_library:
+                                os << "ADD_LIBRARY( " << target.name << " STATIC ${" << target_var << "_SOURCES} )\n";
+                                break;
+                        }
+                        
+                        if(!target.packages.empty())
+                        {
+                            os << "SET_TARGET_PACKAGES( TARGET " << target.name << " PACKAGES ";
+                            for(auto& package : target.packages)
+                                os << package << " ";
+                            os << ")\n";
+                        }
+                        
+                        if(!target.compile_flags.empty())
+                            os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \"" << target.compile_flags << "\" )\n";
+                        
+                        if(!target.definitions.empty())
+                        {
+                            os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
+                            for(auto& define : target.definitions)
+                                os << define << " ";
+                            os << ")\n";
+                        }
+                        
+                        if(!target.includes.empty())
+                        {
+                            os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY INCLUDE_DIRECTORIES ";
+                            for(auto& include : target.includes)
+                                os << "\n    " << include << " ";
+                            os << ")\n";
+                        }
+                        
+                        if(!target.label.empty())
+                            os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
+                        
+                        // TODO version
+                        //SET_PROPERTY( TARGET foo PROPERTY VERSION 0.0.0 )
+                        //SET_PROPERTY( TARGET foo PROPERTY SOVERSION 0 )
+
+                        
+                        if(!target.link_flags.empty())
+                            os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \"" << target.link_flags << "\" )\n";
+                        
+                        if(!target.libs.empty())
+                        {
+                            os << "SET_TARGET_LIBRARIES( TARGET " << target.name << " LIBS ";
+                            for(auto& lib : target.libs)
+                                os << lib << " ";
+                            os << ")\n";
+                        }
+                        if(!target.depends.empty())
+                        {
+                            os << "ADD_DEPENDENCIES( " << target.name << " ";
+                            for(auto& dep : target.depends)
+                                os << dep << " ";
+                            os << ")\n";
+                        }
                     }
                 }
                 skip = !skip;
@@ -361,7 +436,11 @@ private:
             SET,
             CONFIGURE_FILE,
             ADD_SUBDIRECTORY,
-            SET_PROPERTY
+            SET_PROPERTY,
+            ADD_EXECUTABLE,
+            SET_TARGET_PACKAGES,
+            SET_TARGET_LIBRARIES,
+            ADD_DEPENDENCIES
         } type;
         std::string name;
         std::vector<std::string> args;
@@ -392,6 +471,14 @@ private:
                 type = ADD_SUBDIRECTORY;
             else if(cmd_name == "SET_PROPERTY")
                 type = SET_PROPERTY;
+            else if(cmd_name == "ADD_EXECUTABLE")
+                type = ADD_EXECUTABLE;
+            else if(cmd_name == "SET_TARGET_PACKAGES")
+                type = SET_TARGET_PACKAGES;
+            else if(cmd_name == "SET_TARGET_LIBRARIES")
+                type = SET_TARGET_LIBRARIES;
+            else if(cmd_name == "ADD_DEPENDENCIES")
+                type = ADD_DEPENDENCIES;
         }
     };
     command_t command;
@@ -738,7 +825,7 @@ project_t create(const std::string& name, const std::string& source_path, const 
         os << "\n";
         os << "##<< Managed Configuration >>##\n";
         os << "SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\")\n";
-        os << "include(DeclTarget)\n";
+        os << "include(cxxide)\n";
         os << "\n";
         os << "##<< Referenced Packages >>##\n";
         os << "##<< Referenced Packages >>##\n";
@@ -763,100 +850,47 @@ project_t create(const std::string& name, const std::string& source_path, const 
         if(err)
             throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + '/' + "Modules" + ")");
 
-        std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "DeclTarget.cmake");
-        os << "FUNCTION(DECLARE_TARGET target_name)\n";
-        os << "STRING(TOUPPER \"${target_name}\" TARGET)\n";
+        std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "cxxide.cmake");
+        os << "INCLUDE( CMakeParseArguments )\n";
+        os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
+        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
+        os << "    FOREACH(library IN LISTS arg_LIBS)\n";
+        os << "        FIND_LIBRARY(LIB ${library})\n";
+        os << "        LIST(APPEND LIBS ${LIB})\n";
+        os << "    ENDFOREACH()\n";
+        os << "    TARGET_LINK_LIBRARIES(${arg_TARGET} ${LIBS})\n";
+        os << "ENDFUNCTION()\n";
         os << "\n";
-        os << "IF(\"${TARGET}_TYPE\" STREQUAL \"EXECUTABLE\")\n";
-        os << "    ADD_EXECUTABLE(\"${target_name}\" ${TARGET}_SOURCES)\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
-        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
-        os << "    ENDIF()\n";
-        os << "\n";
-        os << "ELSEIF(\"${TARGET}_TYPE\" STREQUAL \"SHARED_LIBRARY\")\n";
-        os << "    ADD_LIBRARY(\"${target_name}\" SHARED ${TARGET}_SOURCES)\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
-        os << "        STRING(REPLACE \".\" \";\" VERSION \"${TARGET}_VERSION\")\n";
-        os << "        list(GET ${VERSION} 0 VERSION_MAJOR)\n";
-        os << "        SET_PROPERTY(TARGET foo PROPERTY SOVERSION ${VERSION_MAJOR})\n";
-        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
-        os << "    ENDIF()\n";
-        os << "\n";
-        os << "ELSEIF(\"${TARGET}_TYPE\" STREQUAL \"STATIC_LIBRARY\")\n";
-        os << "    ADD_LIBRARY(\"${target_name}\" STATIC ${TARGET}_SOURCES)\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${TARGET}_VERSION\")\n";
-        os << "        SET_PROPERTY(TARGET foo PROPERTY VERSION ${TARGET}_VERSION)\n";
-        os << "    ENDIF()\n";
-        os << "\n";
-        os << "ELSE()\n";
-        os << "    MESSAGE(FATAL_ERROR \"Unknown target type '${TARGET}_TYPE' in target '${target_name}'\")\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_LABEL\")\n";
-        os << "    SET_PROPERTY(TARGET ${target_name} PROPERTY PROJECT_LABEL \"${TARGET}_LABEL\")\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_DEFINES\")\n";
-        os << "    SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY COMPILE_DEFINITIONS ${TARGET}_DEFINES)\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_INCLUDES\")\n";
-        os << "    SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${TARGET}_INCLUDES)\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_COMPILEFLAGS\")\n";
-        os << "    SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY COMPILE_FLAGS \"${TARGET}_COMPILEFLAGS\")\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_LINKFLAGS\")\n";
-        os << "    SET_PROPERTY(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS \"${TARGET}_LINKFLAGS\")\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "FOREACH(library ${TARGET}_LIBS)\n";
-        os << "    FIND_LIBRARY(\"${library}\" ${library})\n";
-        os << "    LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${${library}})\n";
-        os << "ENDFOREACH()\n";
-        os << "\n";
-        os << "FOREACH(package ${TARGET}_PACKAGES)\n";
-        os << "    STRING(TOUPPER \"${package}\" upper_package)\n";
-        os << "\n";    
-        os << "    IF(\"${package}_FOUND\")\n";
-        os << "        SET(PKG ${package})\n";
-        os << "    ELSEIF(\"${upper_package}_FOUND\")\n";
-        os << "        SET(PKG ${upper_package})\n";
-        os << "    ELSE()\n";
-        os << "        # Not actually an accurate message - more accurate is that it is not recognised.\n";
-        os << "        MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${target_name} NOTFOUND or UNRESOLVED'\")\n";
-        os << "    ENDIF()\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
-        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY COMPILE_DEFINITIONS ${PKG}_DEFINITIONS)\n";
-        os << "    ENDIF()\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
-        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIRS)\n";
-        os << "    ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
-        os << "        SET_PROPERTY(TARGET ${target_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIR)\n";
-        os << "    ENDIF()\n";
-        os << "\n";    
-        os << "    IF(DEFINED \"${PKG}_LIBRARIES\")\n";
-        os << "        LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${PKG}_LIBRARIES)\n";
-        os << "    ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
-        os << "        LIST(APPEND \"${TARGET}_RESOLVED_LIBS\" ${PKG}_LIBRARY)\n";
-        os << "    ENDIF()\n";
-        os << "\n";    
-        os << "ENDFOREACH()\n";
-        os << "\n";
-        os << "IF(DEFINED \"RESOLVED_LIBS\")\n";
-        os << "    TARGET_LINK_LIBRARIES(${target_name} ${TARGET}_RESOLVED_LIBS)\n";
-        os << "ENDIF()\n";
-        os << "\n";
-        os << "IF(DEFINED \"${TARGET}_DEPENDS\")\n";
-        os << "    ADD_DEPENDENCIES(${target_name} ${TARGET}_DEPENDS)\n";
-        os << "ENDIF()\n";
+        os << "FUNCTION( SET_TARGET_PACKAGES )\n";
+        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"PACKAGES\" ${ARGV})\n";
+        os << "    FOREACH(package IN LISTS arg_PACKAGES)\n";
+        os << "        STRING(TOUPPER \"${package}\" upper_package)\n";
+        os << "\n";        
+        os << "        IF(\"${package}_FOUND\")\n";
+        os << "            SET(PKG ${package})\n";
+        os << "        ELSEIF(\"${upper_package}_FOUND\")\n";
+        os << "            SET(PKG ${upper_package})\n";
+        os << "        ELSE()\n";
+        os << "            # Not actually an accurate message - more accurate is that it is not recognised.\n";
+        os << "            MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${arg_TARGET}' NOTFOUND\")\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${PKG}_DEFINITIONS)\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIRS)\n";
+        os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIR)\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${PKG}_LIBRARIES)\n";
+        os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${PKG}_LIBRARY)\n";
+        os << "        ENDIF()\n";
+        os << "    ENDFOREACH()\n";
         os << "ENDFUNCTION()\n";
     }
 
