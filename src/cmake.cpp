@@ -57,12 +57,13 @@ class list_rewriter_t : public listparser_t
 {
 private:
     std::ostream& os;
-    const configuration_t& config;
+    const configuration_t* config;
+    const configuration_t::directory_t& directory;
     bool is_managed;
     bool skip;
 public:
-    list_rewriter_t(std::ostream& os, const configuration_t& config)
-     : os(os), config(config), is_managed(false), skip(false)
+    list_rewriter_t(std::ostream& os, const configuration_t* config, const configuration_t::directory_t& directory)
+     : os(os), config(config), directory(directory), is_managed(false), skip(false)
     {
     }
 
@@ -82,17 +83,17 @@ public:
         
         if(cmt.find("#<< ") == 0)
         {
-            if(cmt == "#<< Managed Configuration >>##")
+            if(config && cmt == "#<< Managed Configuration >>##")
             {
                 is_managed = true;
             }
-            else if(cmt == "#<< Referenced Packages >>##")
+            else if(config && cmt == "#<< Referenced Packages >>##")
             {
                 if(skip)
                 {
                     os << "\n";
-                    for(auto& package : config.packages)
-                        os << "FIND_PACKAGE(" << package << ")\n";
+                    for(auto& package : config->packages)
+                        os << "FIND_PACKAGE( " << package << " )\n";
                 }
                 skip = !skip;
             }
@@ -101,7 +102,35 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!\n";
+                    
+                    if(!directory.definitions.empty())
+                    {
+                        os << "ADD_DEFINITIONS( ";
+                        for(auto& define : directory.definitions)
+                            os << define << " ";
+                        os << ")\n";
+                    }
+
+                    if(!directory.includes.empty())
+                    {
+                        os << "INCLUDE_DIRECTORIES( ";
+                        for(auto& include : directory.includes)
+                            os << include << " ";
+                        os << ")\n";
+                    }
+                    
+                    if(!directory.compile_flags.cxx.empty())
+                        os << "SET( CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " << directory.compile_flags.cxx << "\" )\n";
+
+                    if(!directory.compile_flags.c.empty())
+                        os << "SET( CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " << directory.compile_flags.c << "\" )\n";
+
+                    for(auto& file : directory.configure_files)
+                        os << "CONFIGURE_FILE( " << file.input << " " << file.output << " )\n";
+
+                    for(auto& subdir : directory.subdirectories)
+                        os << "ADD_SUBDIRECTORY( " << subdir.first << " )\n";
+                    
                 }
                 skip = !skip;
             }
@@ -110,7 +139,18 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!\n";
+                    for(auto& file : directory.files)
+                    {
+                        if(!file.definitions.empty())
+                        {
+                            os << "SET_PROPERTY( SOURCE " << file.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
+                            for(auto& define : file.definitions)
+                                os << define << " ";
+                            os << ")\n";
+                        }
+                        if(!file.compile_flags.empty())
+                            os << "SET_PROPERTY(SOURCE " << file.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << directory.compile_flags.c << "\" )\n";
+                    }
                 }
                 skip = !skip;
             }
@@ -119,7 +159,10 @@ public:
                 if(skip)
                 {
                     os << "\n";
-                    os << "Generated content here!\n";
+                    for(auto& target : directory.targets)
+                    {
+                        os << "TODO Generated content here!\n";
+                    }
                 }
                 skip = !skip;
             }
@@ -165,35 +208,99 @@ public:
     virtual ~list_rewriter_t() = default;
 };
 
+void unlink_temps(const std::string& path, const configuration_t::directory_t& directory)
+{
+    int err = unlink((path + "/CMakeLists.txt.tmp").c_str());
+    if(err && errno != ENOENT)
+        throw std::system_error(errno, std::system_category(), std::string("unlink(") + path + "/CMakeLists.txt.tmp" + ")");
+    
+    for(auto& subdir : directory.subdirectories)
+        unlink_temps(path + '/' + subdir.first, subdir.second);
+}
+
+void rename_temps(const std::string& path, const configuration_t::directory_t& directory)
+{
+    int err = rename((path + "/CMakeLists.txt.tmp").c_str(), (path + "/CMakeLists.txt").c_str());
+    if(err)
+        throw std::system_error(errno, std::system_category(), std::string("rename(") + path + "/CMakeLists.txt.tmp" + ", " + path + "/CMakeLists.txt" + ")" );
+    
+    for(auto& subdir : directory.subdirectories)
+        rename_temps(path + '/' + subdir.first, subdir.second);
+}
+
+void write_subdirectory(const std::string& path, const configuration_t::directory_t& directory)
+{
+    try
+    {
+        if(path.empty() || path == "/")
+            throw std::logic_error("root path in subdirectory!");
+    
+        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        std::ofstream os(path + "/CMakeLists.txt.tmp");
+        if(!os)
+            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt.tmp");
+        
+        if(!ifs)
+        {
+            os << "\n";
+            os << "##<< Directory Properties >>##\n";
+            os << "##<< Directory Properties >>##\n";
+            os << "\n";
+            os << "##<< File Properties >>##\n";
+            os << "##<< File Properties >>##\n";
+            os << "\n";
+            os << "##<< Target Properties >>##\n";
+            os << "##<< Target Properties >>##\n";
+            os << "\n";
+        }
+        else
+        {
+            std::noskipws(ifs);
+            
+            std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+            
+            list_rewriter_t rewrite(os, nullptr, directory);
+            
+            auto c = source.c_str();
+            auto end = c + source.size();
+            
+            // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
+            rewrite.parse(c, end);
+            
+            if(!rewrite.managed())
+                throw error("Cannot write; Configuration is unmanaged.");
+        }
+        
+        // Recursively write subdirectory files.
+        for(auto& subdir : directory.subdirectories)
+            write_subdirectory(path + '/' + subdir.first, subdir.second);
+        
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error(std::string("cmake::write_subdirectory(") + path + ") failed"));
+    }
+}
+
 void write(const std::string& root_path, const configuration_t& config)
 {
     if(!config.managed)
         throw error("Invalid attempt to write unmanaged configuration.");
-    /*
-    read all CMakeLsits files referenced in configuration
-    check all files are managed (master has tag and all parsable) - if not throw error
-    
-    open root_path/CMakeLists.txt
-      not exist - create with default contents
-      exist - attempt to parse - if configuration unmanaged throw error
-    
-    open root config, update sections
-    continue recursivly for managed directories
-    */
     
     try
     {
         std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
         if(!ifs)
             throw error("Unable to open CMakeLists.txt");
+
         std::noskipws(ifs);
-        
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
         
         std::ofstream os(root_path + "/CMakeLists.txt.tmp");
         if(!os)
             throw error("Unable to open CMakeLists.txt.tmp");
-        list_rewriter_t rewrite(os, config);
+        
+        list_rewriter_t rewrite(os, &config, config.directory);
         
         auto c = source.c_str();
         auto end = c + source.size();
@@ -203,12 +310,12 @@ void write(const std::string& root_path, const configuration_t& config)
         
         if(rewrite.managed())
         {
-            // update subdirs
+            // Recursively write subdirectory files.
+            for(auto& subdir : config.directory.subdirectories)
+                write_subdirectory(root_path + '/' + subdir.first, subdir.second);
             
-            // TODO recursize rename tmp -> actual
-//            int err = rename(const char *oldpath, const char *newpath);
-//            if(err)
-//                throw std::system_error(errno, std::system_category(), "rename");
+            // Rename CMakeLists.txt.tmp -> CMakeLists.txt recursively
+            rename_temps(root_path, config.directory);
         }
         else
         {
@@ -217,7 +324,14 @@ void write(const std::string& root_path, const configuration_t& config)
     }
     catch(...)
     {
-//        unlink((root_path + "/CMakeLists.txt.tmp").c_str());
+        try
+        {
+            unlink_temps(root_path, config.directory);
+        }
+        catch(...)
+        {
+            std::throw_with_nested(error("cmake::write failed (cleanup failed.)"));
+        }
         std::throw_with_nested(error("cmake::write failed"));
     }
 }
