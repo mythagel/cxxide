@@ -351,8 +351,45 @@ private:
     
     struct command_t
     {
+        enum
+        {
+            UNKNOWN,
+            FIND_PACKAGE,
+            ADD_DEFINITIONS,
+            INCLUDE_DIRECTORIES,
+            SET,
+            CONFIGURE_FILE,
+            ADD_SUBDIRECTORY,
+            SET_PROPERTY
+        } type;
         std::string name;
         std::vector<std::string> args;
+        
+        command_t()
+         : type(UNKNOWN)
+        {
+        }
+        
+        explicit command_t(std::string cmd_name)
+         : type(UNKNOWN), name(cmd_name)
+        {
+            boost::to_upper(cmd_name);
+            
+            if(cmd_name == "FIND_PACKAGE")
+                type = FIND_PACKAGE;
+            else if(cmd_name == "ADD_DEFINITIONS")
+                type = ADD_DEFINITIONS;
+            else if(cmd_name == "INCLUDE_DIRECTORIES")
+                type = INCLUDE_DIRECTORIES;
+            else if(cmd_name == "SET")
+                type = SET;
+            else if(cmd_name == "CONFIGURE_FILE")
+                type = CONFIGURE_FILE;
+            else if(cmd_name == "ADD_SUBDIRECTORY")
+                type = ADD_SUBDIRECTORY;
+            else if(cmd_name == "SET_PROPERTY")
+                type = SET_PROPERTY;
+        }
     };
     command_t command;
     unsigned int nesting;
@@ -404,38 +441,37 @@ public:
     }
     void begin_command(const char* c, const char* end) override
     {
-        if(!interpret) return;
-        command = command_t{{c, end}, {}};
-        boost::to_upper(command.name);
+        command = command_t{{c, end}};
         nesting = 0;
     }
     void open_bracket() override
     {
-        if(!interpret) return;
         if(nesting) command.args.push_back("(");
         ++nesting;
     }
     void close_bracket() override
     {
-        if(!interpret) return;
         --nesting;
         if(nesting) command.args.push_back(")");
     }
     void argument(const char* c, const char* end, bool /*quoted*/) override
     {
-        if(!interpret) return;
         command.args.push_back({c, end});
     }
     void end_command() override
     {
         if(!interpret) return;
         
+        if(command.type == command_t::UNKNOWN)
+            throw error("Unrecognised command " + command.name);
+        
         switch(section)
         {
             case section_Packages:
             {
-                if(command.name != "FIND_PACKAGE")
-                    throw error(std::string("Unrecognised command in Managed Packages: ") + command.name);
+                if(command.type != command_t::FIND_PACKAGE)
+                    throw error(std::string("Unexpected command in Managed Packages: ") + command.name);
+                
                 if(command.args.size() != 1)
                     throw error("Unexpected arguments to FIND_PACKAGE command in Managed Packages");
                 
@@ -444,10 +480,116 @@ public:
             }
             case section_Directory:
             {
+                switch(command.type)
+                {
+                    case command_t::ADD_DEFINITIONS:
+                    {
+                        for(auto& define : command.args)
+                            directory->definitions.push_back(define);
+                        break;
+                    }
+                    case command_t::INCLUDE_DIRECTORIES:
+                    {
+                        for(auto& include : command.args)
+                            directory->includes.push_back(include);
+                        break;
+                    }
+                    case command_t::SET:
+                    {
+                        if(command.args.size() != 2)
+                            throw error("Unexpected arguments to SET command in Directory Properties");
+                        if(command.args[0] == "CMAKE_CXX_FLAGS")
+                        {
+                            if(command.args[1].find("${CMAKE_CXX_FLAGS}") != 0)
+                                throw error("Unexpected argument format to SET command in Directory Properties");
+                            
+                            auto flags = command.args[1].substr(18);
+                            directory->compile_flags.cxx = flags;
+                        }
+                        else if(command.args[0] == "CMAKE_C_FLAGS")
+                        {
+                            if(command.args[1].find("${CMAKE_C_FLAGS}") != 0)
+                                throw error("Unexpected argument format to SET command in Directory Properties");
+                            
+                            auto flags = command.args[1].substr(16);
+                            directory->compile_flags.c = flags;
+                        }
+                        else
+                        {
+                            throw error("Unexpected variable to SET command in Directory Properties");
+                        }
+                        break;
+                    }
+                    case command_t::CONFIGURE_FILE:
+                    {
+                        if(command.args.size() != 2)
+                            throw error("Unexpected arguments to CONFIGURE_FILE command in Directory Properties");
+                        
+                        configuration_t::directory_t::configure_file_t configure_file{command.args[0], command.args[1]};
+                        directory->configure_files.push_back(configure_file);
+                        
+                        break;
+                    }
+                    case command_t::ADD_SUBDIRECTORY:
+                    {
+                        if(command.args.size() != 1)
+                            throw error("Unexpected arguments to ADD_SUBDIRECTORY command in Directory Properties");
+                        
+                        directory->subdirectories.push_back(std::make_pair(command.args[0], configuration_t::directory_t()));
+                        
+                        break;
+                    }
+                    default:
+                        throw error(std::string("Unexpected command in Directory Properties: ") + command.name);
+                }
                 break;
             }
             case section_File:
             {
+                if(command.type != command_t::SET_PROPERTY)
+                    throw error(std::string("Unexpected command in File Properties: ") + command.name);
+                
+                if(command.args.size() < 6)
+                    throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+                
+                if(command.args[0] != "SOURCE")
+                    throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+
+                auto filename = command.args[1];
+                
+                configuration_t::directory_t::file_t* file = nullptr;
+                for(auto& fl : directory->files)
+                {
+                    if(fl.name == filename)
+                    {
+                        file = &fl;
+                        break;
+                    }
+                }
+                if(!file)
+                {
+                    directory->files.emplace_back();
+                    file = &directory->files.back();
+                }
+                
+                if(command.args[2] != "APPEND" && command.args[2] != "APPEND_STRING")
+                    throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+
+                if(command.args[3] != "PROPERTY")
+                    throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+                
+                if(command.args[4] == "COMPILE_DEFINITIONS")
+                {
+                    for(size_t i = 5; i < command.args.size(); ++i)
+                        file->definitions.push_back(command.args[i]);
+                }
+                else if(command.args[4] == "COMPILE_FLAGS")
+                {
+                    file->compile_flags = command.args[5];
+                }
+                else
+                    throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+                
                 break;
             }
             case section_Target:

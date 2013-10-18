@@ -44,7 +44,14 @@ int main(int argc, char* argv[])
         
         // testing only.
         cmake::configuration_t config;
+        config.name = project_name;
         config.packages.insert("Boost");
+        
+        config.directory.definitions.push_back("-DBLAH");
+        config.directory.includes.push_back("/usr/local/include/");
+        config.directory.compile_flags.cxx = "-std=c++11";
+        config.directory.compile_flags.c = "-std=c11";
+        
 //        config.directory.subdirectories.push_back({"src", {}});
         cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
         
