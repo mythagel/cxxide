@@ -42,9 +42,6 @@ struct error : std::runtime_error
 
 struct configuration_t
 {
-    std::string name;
-    bool managed;
-
     struct directory_t
     {
         std::vector<std::string> definitions;
@@ -94,7 +91,9 @@ struct configuration_t
         
         std::vector<std::pair<std::string, directory_t>> subdirectories;
     };
-    
+
+    std::string name;
+    bool managed;
     std::set<std::string> packages;
     directory_t directory;    
     

@@ -150,7 +150,7 @@ public:
                             os << ")\n";
                         }
                         if(!file.compile_flags.empty())
-                            os << "SET_PROPERTY(SOURCE " << file.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << directory.compile_flags.c << "\" )\n";
+                            os << "SET_PROPERTY( SOURCE " << file.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << file.compile_flags << "\" )\n";
                     }
                 }
                 skip = !skip;
@@ -354,6 +354,7 @@ private:
         enum
         {
             UNKNOWN,
+            PROJECT,
             FIND_PACKAGE,
             ADD_DEFINITIONS,
             INCLUDE_DIRECTORIES,
@@ -375,7 +376,9 @@ private:
         {
             boost::to_upper(cmd_name);
             
-            if(cmd_name == "FIND_PACKAGE")
+            if(cmd_name == "PROJECT")
+                type = PROJECT;
+            else if(cmd_name == "FIND_PACKAGE")
                 type = FIND_PACKAGE;
             else if(cmd_name == "ADD_DEFINITIONS")
                 type = ADD_DEFINITIONS;
@@ -460,7 +463,15 @@ public:
     }
     void end_command() override
     {
-        if(!interpret) return;
+        if(!interpret)
+        {
+            if(command.type == command_t::PROJECT)
+            {
+                if(!command.args.empty() && config)
+                    config->name = command.args[0];
+            }
+            return;
+        }
         
         if(command.type == command_t::UNKNOWN)
             throw error("Unrecognised command " + command.name);
@@ -475,6 +486,8 @@ public:
                 if(command.args.size() != 1)
                     throw error("Unexpected arguments to FIND_PACKAGE command in Managed Packages");
                 
+                // Safe to dereference config here because section_Package is only set above
+                // If config != nullptr
                 config->packages.insert(command.args[0]);
                 break;
             }
@@ -570,6 +583,7 @@ public:
                 {
                     directory->files.emplace_back();
                     file = &directory->files.back();
+                    file->name = filename;
                 }
                 
                 if(command.args[2] != "APPEND" && command.args[2] != "APPEND_STRING")
@@ -586,6 +600,8 @@ public:
                 else if(command.args[4] == "COMPILE_FLAGS")
                 {
                     file->compile_flags = command.args[5];
+                    if(!file->compile_flags.empty() && file->compile_flags[0] == ' ')
+                        file->compile_flags = file->compile_flags.substr(1);
                 }
                 else
                     throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
