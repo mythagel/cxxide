@@ -34,6 +34,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
+#include <boost/algorithm/string/case_conv.hpp>
 
 namespace cxxide
 {
@@ -208,24 +209,24 @@ public:
     virtual ~list_rewriter_t() = default;
 };
 
-void unlink_temps(const std::string& path, const configuration_t::directory_t& directory)
+void rollback(const std::string& path, const configuration_t::directory_t& directory)
 {
     int err = unlink((path + "/CMakeLists.txt.tmp").c_str());
     if(err && errno != ENOENT)
         throw std::system_error(errno, std::system_category(), std::string("unlink(") + path + "/CMakeLists.txt.tmp" + ")");
     
     for(auto& subdir : directory.subdirectories)
-        unlink_temps(path + '/' + subdir.first, subdir.second);
+        rollback(path + '/' + subdir.first, subdir.second);
 }
 
-void rename_temps(const std::string& path, const configuration_t::directory_t& directory)
+void commit(const std::string& path, const configuration_t::directory_t& directory)
 {
     int err = rename((path + "/CMakeLists.txt.tmp").c_str(), (path + "/CMakeLists.txt").c_str());
     if(err)
         throw std::system_error(errno, std::system_category(), std::string("rename(") + path + "/CMakeLists.txt.tmp" + ", " + path + "/CMakeLists.txt" + ")" );
     
     for(auto& subdir : directory.subdirectories)
-        rename_temps(path + '/' + subdir.first, subdir.second);
+        commit(path + '/' + subdir.first, subdir.second);
 }
 
 void write_subdirectory(const std::string& path, const configuration_t::directory_t& directory)
@@ -256,7 +257,6 @@ void write_subdirectory(const std::string& path, const configuration_t::director
         else
         {
             std::noskipws(ifs);
-            
             std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
             
             list_rewriter_t rewrite(os, nullptr, directory);
@@ -267,8 +267,6 @@ void write_subdirectory(const std::string& path, const configuration_t::director
             // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
             rewrite.parse(c, end);
             
-            if(!rewrite.managed())
-                throw error("Cannot write; Configuration is unmanaged.");
         }
         
         // Recursively write subdirectory files.
@@ -315,7 +313,7 @@ void write(const std::string& root_path, const configuration_t& config)
                 write_subdirectory(root_path + '/' + subdir.first, subdir.second);
             
             // Rename CMakeLists.txt.tmp -> CMakeLists.txt recursively
-            rename_temps(root_path, config.directory);
+            commit(root_path, config.directory);
         }
         else
         {
@@ -326,7 +324,7 @@ void write(const std::string& root_path, const configuration_t& config)
     {
         try
         {
-            unlink_temps(root_path, config.directory);
+            rollback(root_path, config.directory);
         }
         catch(...)
         {
@@ -336,7 +334,207 @@ void write(const std::string& root_path, const configuration_t& config)
     }
 }
 
-void project_t::configure()
+class list_reader_t : public listparser_t
+{
+private:
+    configuration_t* config;
+    configuration_t::directory_t* directory;
+    bool is_managed;
+    bool interpret;
+    enum 
+    {
+        section_Packages = -1,
+        section_Directory,
+        section_File,
+        section_Target,
+    } section;
+    
+    struct command_t
+    {
+        std::string name;
+        std::vector<std::string> args;
+    };
+    command_t command;
+    unsigned int nesting;
+public:
+    list_reader_t(configuration_t* config, configuration_t::directory_t* directory)
+     : config(config), directory(directory), is_managed(false), interpret(false), section(section_Directory), nesting(0)
+    {
+    }
+
+    bool managed() const
+    {
+        return is_managed;
+    }
+
+    void whitespace(const char*, const char*) override
+    {
+    }
+    void comment(const char* c, const char* end) override
+    {
+        auto cmt = std::string(c, end);
+        
+        if(cmt.find("#<< ") == 0)
+        {
+            if(config && cmt == "#<< Managed Configuration >>##")
+            {
+                is_managed = true;
+            }
+            else if(config && cmt == "#<< Referenced Packages >>##")
+            {
+                interpret = !interpret;
+                section = section_Packages;
+            }
+            else if(cmt == "#<< Directory Properties >>##")
+            {
+                interpret = !interpret;
+                section = section_Directory;
+            }
+            else if(cmt == "#<< File Properties >>##")
+            {
+                interpret = !interpret;
+                section = section_File;
+            }
+            else if(cmt == "#<< Target Properties >>##")
+            {
+                interpret = !interpret;
+                section = section_Target;
+            }
+        }
+    }
+    void begin_command(const char* c, const char* end) override
+    {
+        if(!interpret) return;
+        command = command_t{{c, end}, {}};
+        boost::to_upper(command.name);
+        nesting = 0;
+    }
+    void open_bracket() override
+    {
+        if(!interpret) return;
+        if(nesting) command.args.push_back("(");
+        ++nesting;
+    }
+    void close_bracket() override
+    {
+        if(!interpret) return;
+        --nesting;
+        if(nesting) command.args.push_back(")");
+    }
+    void argument(const char* c, const char* end, bool /*quoted*/) override
+    {
+        if(!interpret) return;
+        command.args.push_back({c, end});
+    }
+    void end_command() override
+    {
+        if(!interpret) return;
+        
+        switch(section)
+        {
+            case section_Packages:
+            {
+                if(command.name != "FIND_PACKAGE")
+                    throw error(std::string("Unrecognised command in Managed Packages: ") + command.name);
+                if(command.args.size() != 1)
+                    throw error("Unexpected arguments to FIND_PACKAGE command in Managed Packages");
+                
+                config->packages.insert(command.args[0]);
+                break;
+            }
+            case section_Directory:
+            {
+                break;
+            }
+            case section_File:
+            {
+                break;
+            }
+            case section_Target:
+            {
+                break;
+            }
+        }
+    }
+
+    virtual ~list_reader_t() = default;
+};
+
+void read_subdirectory(const std::string& path, configuration_t::directory_t* directory)
+{
+    try
+    {
+        if(path.empty() || path == "/")
+            throw std::logic_error("root path in subdirectory!");
+    
+        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        if(!ifs)
+            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt");
+        
+        std::noskipws(ifs);
+        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+        
+        list_reader_t reader(nullptr, directory);
+        
+        auto c = source.c_str();
+        auto end = c + source.size();
+        
+        // Read CMakeLists.txt and fill config
+        reader.parse(c, end);
+        
+        // Recursively read subdirectory files.
+        for(auto& subdir : directory->subdirectories)
+            read_subdirectory(path + '/' + subdir.first, &subdir.second);
+        
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path + ") failed"));
+    }
+}
+
+configuration_t read(const std::string& root_path)
+{
+    try
+    {
+        configuration_t config;
+        
+        std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        if(!ifs)
+            throw error("Unable to open CMakeLists.txt");
+
+        std::noskipws(ifs);
+        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+        
+        list_reader_t reader(&config, &config.directory);
+        
+        auto c = source.c_str();
+        auto end = c + source.size();
+        
+        // Read CMakeLists.txt and fill config
+        reader.parse(c, end);
+        
+        if(reader.managed())
+        {
+            // Recursively read subdirectory files.
+            for(auto& subdir : config.directory.subdirectories)
+                read_subdirectory(root_path + '/' + subdir.first, &subdir.second);
+            
+            return config;
+        }
+        else
+        {
+            config.managed = false;
+            return config;
+        }
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("cmake::read failed"));
+    }
+}
+
+void project_t::generate()
 {
     try
     {
@@ -349,7 +547,7 @@ void project_t::configure()
     }
     catch(...)
     {
-        std::throw_with_nested(error("git::init failed"));
+        std::throw_with_nested(error("project::generate failed"));
     }
 }
 void project_t::build()
@@ -365,7 +563,7 @@ void project_t::build()
     }
     catch(...)
     {
-        std::throw_with_nested(error("git::init failed"));
+        std::throw_with_nested(error("project::build failed"));
     }
 }
 

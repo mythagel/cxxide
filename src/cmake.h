@@ -102,6 +102,7 @@ struct configuration_t
 };
 
 void write(const std::string& root_path, const configuration_t& config);
+configuration_t read(const std::string& root_path);
 
 class project_t
 {
@@ -110,8 +111,10 @@ friend project_t create(const std::string& name, const std::string& source_path,
 private:
     std::string source_path;
     std::string build_path;
+    
+    configuration_t configuration;
 public:
-    void configure();
+    void generate();
     void build();
 };
 

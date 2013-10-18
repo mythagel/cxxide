@@ -42,9 +42,17 @@ int main(int argc, char* argv[])
         auto project = project::create(project_name, "/home/nicholas/dev/build/cxxide/projects/", "/home/nicholas/dev/build/cxxide/projects/build/");
         std::cout << "Created project '" << project_name << "'.\n";
         
+        // testing only.
         cmake::configuration_t config;
-        config.directory.subdirectories.push_back({"src", {}});
+        config.packages.insert("Boost");
+//        config.directory.subdirectories.push_back({"src", {}});
         cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
+        
+        {
+            auto config = cmake::read(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name);
+            for(auto& pkg : config.packages)
+                std::cout << "pkg: " << pkg << "\n";
+        }
     }
     catch(const std::exception& e)
     {
