@@ -102,6 +102,7 @@ int main(int argc, char* argv[])
         config.directory.configure_files.push_back({"blah.cpp.in", "blah.cpp"});
         
         config.directory.files.push_back({"blah.cpp", {"-DBLEH", "-DFOO"}, "-Wall -Wextra"});
+        config.directory.files.push_back({"b.cpp", {"-DBBLEH", "-DBFOO"}, "-Wall -Wextra"});
         
         cmake::configuration_t::directory_t::target_t foo;
         foo.name = "foo";

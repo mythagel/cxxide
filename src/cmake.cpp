@@ -145,8 +145,12 @@ public:
                         if(!file.definitions.empty())
                         {
                             os << "SET_PROPERTY( SOURCE " << file.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
-                            for(auto& define : file.definitions)
+                            for(auto define : file.definitions)
+                            {
+                                if(define.find("-D") == 0)
+                                    define = define.substr(2);
                                 os << define << " ";
+                            }
                             os << ")\n";
                         }
                         if(!file.compile_flags.empty())
@@ -200,8 +204,12 @@ public:
                         if(!target.definitions.empty())
                         {
                             os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
-                            for(auto& define : target.definitions)
+                            for(auto define : target.definitions)
+                            {
+                                if(define.find("-D") == 0)
+                                    define = define.substr(2);
                                 os << define << " ";
+                            }
                             os << ")\n";
                         }
                         
@@ -682,7 +690,12 @@ public:
                 if(command.args[4] == "COMPILE_DEFINITIONS")
                 {
                     for(size_t i = 5; i < command.args.size(); ++i)
-                        file->definitions.push_back(command.args[i]);
+                    {
+                        auto define = command.args[i];
+                        if(!define.empty() && define[0] != '-')
+                            define = "-D" + define;
+                        file->definitions.push_back(define);
+                    }
                 }
                 else if(command.args[4] == "COMPILE_FLAGS")
                 {
@@ -876,19 +889,19 @@ project_t create(const std::string& name, const std::string& source_path, const 
         os << "        ENDIF()\n";
         os << "\n";        
         os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${PKG}_DEFINITIONS)\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${${PKG}_DEFINITIONS})\n";
         os << "        ENDIF()\n";
         os << "\n";        
         os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIRS)\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIRS})\n";
         os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${PKG}_INCLUDE_DIR)\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIR})\n";
         os << "        ENDIF()\n";
         os << "\n";        
         os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
-        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${PKG}_LIBRARIES)\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARIES})\n";
         os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
-        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${PKG}_LIBRARY)\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARY})\n";
         os << "        ENDIF()\n";
         os << "    ENDFOREACH()\n";
         os << "ENDFUNCTION()\n";
