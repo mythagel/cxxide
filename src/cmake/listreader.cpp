@@ -1,0 +1,339 @@
+/* cxxcam - C++ CAD/CAM driver library.
+ * Copyright (C) 2013  Nicholas Gill
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * listreader.cpp
+ *
+ *  Created on: 2013-10-19
+ *      Author: nicholas
+ */
+
+#include "listreader.h"
+#include "cmake.h"
+#include <boost/algorithm/string/case_conv.hpp>
+
+namespace cxxide
+{
+namespace cmake
+{
+
+list_reader_t::command_t::command_t()
+ : type(UNKNOWN)
+{
+}
+
+list_reader_t::command_t::command_t(std::string cmd_name)
+ : type(UNKNOWN), name(cmd_name)
+{
+    boost::to_upper(cmd_name);
+    
+    if(cmd_name == "PROJECT")
+        type = PROJECT;
+    else if(cmd_name == "FIND_PACKAGE")
+        type = FIND_PACKAGE;
+    else if(cmd_name == "ADD_DEFINITIONS")
+        type = ADD_DEFINITIONS;
+    else if(cmd_name == "INCLUDE_DIRECTORIES")
+        type = INCLUDE_DIRECTORIES;
+    else if(cmd_name == "SET")
+        type = SET;
+    else if(cmd_name == "CONFIGURE_FILE")
+        type = CONFIGURE_FILE;
+    else if(cmd_name == "ADD_SUBDIRECTORY")
+        type = ADD_SUBDIRECTORY;
+    else if(cmd_name == "SET_PROPERTY")
+        type = SET_PROPERTY;
+    else if(cmd_name == "ADD_EXECUTABLE")
+        type = ADD_EXECUTABLE;
+    else if(cmd_name == "SET_TARGET_PACKAGES")
+        type = SET_TARGET_PACKAGES;
+    else if(cmd_name == "SET_TARGET_LIBRARIES")
+        type = SET_TARGET_LIBRARIES;
+    else if(cmd_name == "ADD_DEPENDENCIES")
+        type = ADD_DEPENDENCIES;
+}
+
+list_reader_t::list_reader_t(configuration_t* config, directory_t* directory)
+ : config(config), directory(directory), is_managed(false), interpret(false), section(section_Directory), nesting(0)
+{
+}
+
+bool list_reader_t::managed() const
+{
+    return is_managed;
+}
+
+void list_reader_t::whitespace(const char*, const char*)
+{
+}
+void list_reader_t::comment(const char* c, const char* end)
+{
+    auto cmt = std::string(c, end);
+    
+    if(cmt.find("#<< ") == 0)
+    {
+        if(config && cmt == "#<< Managed Configuration >>##")
+        {
+            is_managed = true;
+        }
+        else if(config && cmt == "#<< Referenced Packages >>##")
+        {
+            interpret = !interpret;
+            section = section_Packages;
+        }
+        else if(cmt == "#<< Directory Properties >>##")
+        {
+            interpret = !interpret;
+            section = section_Directory;
+        }
+        else if(cmt == "#<< File Properties >>##")
+        {
+            interpret = !interpret;
+            section = section_File;
+        }
+        else if(cmt == "#<< Target Properties >>##")
+        {
+            interpret = !interpret;
+            section = section_Target;
+        }
+    }
+}
+void list_reader_t::begin_command(const char* c, const char* end)
+{
+    command = command_t{{c, end}};
+    nesting = 0;
+}
+void list_reader_t::open_bracket()
+{
+    if(nesting) command.args.push_back("(");
+    ++nesting;
+}
+void list_reader_t::close_bracket()
+{
+    --nesting;
+    if(nesting) command.args.push_back(")");
+}
+void list_reader_t::argument(const char* c, const char* end, bool /*quoted*/)
+{
+    command.args.push_back({c, end});
+}
+void list_reader_t::end_command()
+{
+    if(!interpret)
+    {
+        if(command.type == command_t::PROJECT)
+        {
+            if(!command.args.empty() && config)
+                config->name = command.args[0];
+        }
+        return;
+    }
+    
+    if(command.type == command_t::UNKNOWN)
+        throw error("Unrecognised command " + command.name);
+    
+    switch(section)
+    {
+        case section_Packages:
+        {
+            if(command.type != command_t::FIND_PACKAGE)
+                throw error(std::string("Unexpected command in Managed Packages: ") + command.name);
+            
+            if(command.args.size() != 1)
+                throw error("Unexpected arguments to FIND_PACKAGE command in Managed Packages");
+            
+            // Safe to dereference config here because section_Package is only set above
+            // If config != nullptr
+            config->packages.insert(command.args[0]);
+            break;
+        }
+        case section_Directory:
+        {
+            switch(command.type)
+            {
+                case command_t::ADD_DEFINITIONS:
+                {
+                    for(auto& define : command.args)
+                        directory->definitions.push_back(define);
+                    break;
+                }
+                case command_t::INCLUDE_DIRECTORIES:
+                {
+                    for(auto& include : command.args)
+                        directory->includes.push_back(include);
+                    break;
+                }
+                case command_t::SET:
+                {
+                    if(command.args.size() != 2)
+                        throw error("Unexpected arguments to SET command in Directory Properties");
+                    if(command.args[0] == "CMAKE_CXX_FLAGS")
+                    {
+                        if(command.args[1].find("${CMAKE_CXX_FLAGS}") != 0)
+                            throw error("Unexpected argument format to SET command in Directory Properties");
+                        
+                        auto flags = command.args[1].substr(18);
+                        directory->compile_flags.cxx = flags;
+                    }
+                    else if(command.args[0] == "CMAKE_C_FLAGS")
+                    {
+                        if(command.args[1].find("${CMAKE_C_FLAGS}") != 0)
+                            throw error("Unexpected argument format to SET command in Directory Properties");
+                        
+                        auto flags = command.args[1].substr(16);
+                        directory->compile_flags.c = flags;
+                    }
+                    else
+                    {
+                        throw error("Unexpected variable to SET command in Directory Properties");
+                    }
+                    break;
+                }
+                case command_t::CONFIGURE_FILE:
+                {
+                    if(command.args.size() != 2)
+                        throw error("Unexpected arguments to CONFIGURE_FILE command in Directory Properties");
+                    
+                    directory_t::configure_file_t configure_file{command.args[0], command.args[1]};
+                    directory->configure_files.push_back(configure_file);
+                    
+                    break;
+                }
+                case command_t::ADD_SUBDIRECTORY:
+                {
+                    if(command.args.size() != 1)
+                        throw error("Unexpected arguments to ADD_SUBDIRECTORY command in Directory Properties");
+                    
+                    directory->subdirectories.push_back(std::make_pair(command.args[0], directory_t()));
+                    
+                    break;
+                }
+                default:
+                    throw error(std::string("Unexpected command in Directory Properties: ") + command.name);
+            }
+            break;
+        }
+        case section_File:
+        {
+            if(command.type != command_t::SET_PROPERTY)
+                throw error(std::string("Unexpected command in File Properties: ") + command.name);
+            
+            if(command.args.size() < 6)
+                throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+            
+            if(command.args[0] != "SOURCE")
+                throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+
+            auto filename = command.args[1];
+            
+            file_t* file = nullptr;
+            for(auto& fl : directory->files)
+            {
+                if(fl.name == filename)
+                {
+                    file = &fl;
+                    break;
+                }
+            }
+            if(!file)
+            {
+                directory->files.emplace_back();
+                file = &directory->files.back();
+                file->name = filename;
+            }
+            
+            if(command.args[2] != "APPEND" && command.args[2] != "APPEND_STRING")
+                throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+
+            if(command.args[3] != "PROPERTY")
+                throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+            
+            if(command.args[4] == "COMPILE_DEFINITIONS")
+            {
+                for(size_t i = 5; i < command.args.size(); ++i)
+                {
+                    auto define = command.args[i];
+                    if(!define.empty() && define[0] != '-')
+                        define = "-D" + define;
+                    file->definitions.push_back(define);
+                }
+            }
+            else if(command.args[4] == "COMPILE_FLAGS")
+            {
+                file->compile_flags = command.args[5];
+                if(!file->compile_flags.empty() && file->compile_flags[0] == ' ')
+                    file->compile_flags = file->compile_flags.substr(1);
+            }
+            else
+                throw error("Unexpected arguments to SET_PROPERTY command in File Properties");
+            
+            break;
+        }
+        case section_Target:
+        {
+            switch(command.type)
+            {
+                case command_t::SET:
+                {
+//SET( FOO_SOURCES 
+//    a.cpp 
+//    b.cpp 
+//    c.cpp )
+                    break;
+                }
+                case command_t::ADD_EXECUTABLE:
+                {
+//ADD_EXECUTABLE( foo ${FOO_SOURCES} )
+                    break;
+                }
+                case command_t::SET_TARGET_PACKAGES:
+                {
+//SET_TARGET_PACKAGES( TARGET foo PACKAGES Boost X11 )
+                    break;
+                }
+                case command_t::SET_PROPERTY:
+                {
+//SET_PROPERTY( TARGET foo APPEND_STRING PROPERTY COMPILE_FLAGS "-Wno-unused-parameters" )
+//SET_PROPERTY( TARGET foo APPEND PROPERTY COMPILE_DEFINITIONS FOOFOO FOOBAR )
+//SET_PROPERTY( TARGET foo APPEND PROPERTY INCLUDE_DIRECTORIES 
+//    foo 
+//    /usr/include/foo/ )
+//SET_PROPERTY( TARGET foo PROPERTY PROJECT_LABEL "Foo executable" )
+//SET_PROPERTY( TARGET foo APPEND_STRING PROPERTY LINK_FLAGS "-fPIC" )
+                    break;
+                }
+                case command_t::SET_TARGET_LIBRARIES:
+                {
+//SET_TARGET_LIBRARIES( TARGET foo LIBS m pthread )
+                    break;
+                }
+                case command_t::ADD_DEPENDENCIES:
+                {
+//ADD_DEPENDENCIES( foo foo )
+                    break;
+                }
+                default:
+                    throw error(std::string("Unexpected command in Directory Properties: ") + command.name);
+            }
+            break;
+        }
+    }
+}
+
+}
+}
+

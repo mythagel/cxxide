@@ -25,7 +25,7 @@ void print_exception(const std::exception& e, int level = 0)
     }
 }
 
-std::string str(const std::string& name, const cmake::configuration_t::directory_t& dir, int level)
+std::string str(const std::string& name, const cmake::directory_t& dir, int level)
 {
     std::stringstream s;
     std::string p(level, ' ');
@@ -104,10 +104,10 @@ int main(int argc, char* argv[])
         config.directory.files.push_back({"blah.cpp", {"-DBLEH", "-DFOO"}, "-Wall -Wextra"});
         config.directory.files.push_back({"b.cpp", {"-DBBLEH", "-DBFOO"}, "-Wall -Wextra"});
         
-        cmake::configuration_t::directory_t::target_t foo;
+        cmake::target_t foo;
         foo.name = "foo";
         foo.label = "Foo executable";
-        foo.type = cmake::configuration_t::directory_t::target_t::executable;
+        foo.type = cmake::target_t::executable;
         foo.version = "1.2.3";
         foo.sources = {"a.cpp", "b.cpp", "c.cpp"};
         foo.depends = {"foo"};
@@ -119,20 +119,31 @@ int main(int argc, char* argv[])
         foo.packages = {"Boost", "X11"};
         config.directory.targets.push_back(foo);
         
-//        FAILED: /usr/bin/c++   -D-DFOOBAR -D-DFOOFOO -DBLAH -std=c++11 -I/usr/local/include -IBoost_INCLUDE_DIRS -IX11_INCLUDE_DIR -Ifoo -I/usr/include/foo    -Wno-unused-parameters -MMD -MT CMakeFiles/foo.dir/c.cpp.o -MF "CMakeFiles/foo.dir/c.cpp.o.d" -o CMakeFiles/foo.dir/c.cpp.o -c /home/nicholas/dev/build/cxxide/projects/example/c.cpp
-
-        
         mkdir((std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name + "/src").c_str(), 0777);
-        config.directory.subdirectories.push_back({"src", {}});
+        config.directory.subdirectories.push_back({"src", cmake::directory_t()});
         
-        std::cout << str(config) << "\n";
+        std::string written;
+        {
+            std::ostringstream s;
+            s << str(config) << "\n";
+            written = s.str();
+            std::cout << written;
+        }
         
         cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
         
         {
             std::cout << std::string(40, '-') << "\n";
             auto config = cmake::read(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name);
-            std::cout << str(config) << "\n";
+            std::string read;
+            {
+                std::ostringstream s;
+                s << str(config) << "\n";
+                read = s.str();
+                std::cout << read;
+            }
+            if(read != written)
+                std::cout << "ERROR - WRITTEN AND READ DIFFER!\n";
         }
     }
     catch(const std::exception& e)
