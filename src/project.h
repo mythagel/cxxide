@@ -25,8 +25,8 @@
 #ifndef PROJECT_H_
 #define PROJECT_H_
 #include <string>
-#include "git.h"
-#include "cmake.h"
+#include "git/git.h"
+#include "cmake/cmake.h"
 #include <stdexcept>
 
 namespace cxxide

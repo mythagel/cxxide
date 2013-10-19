@@ -1,0 +1,5 @@
+
+INCLUDE_DIRECTORIES(../system/)
+ADD_LIBRARY(git STATIC git.cpp)
+TARGET_LINK_LIBRARIES(git system)
+
