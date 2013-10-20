@@ -49,7 +49,7 @@ std::string str(const cmake::target_t& target, int level)
             break;
     }
     if(!target.version.empty())
-        s << p << "version: " << target.version << "\n";
+        s << p << "version: " << target.version.major << "." << target.version.minor << "." << target.version.patch << "\n";
     
     if(!target.sources.empty())
     {
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
         foo.name = "foo";
         foo.label = "Foo executable";
         foo.type = cmake::target_t::executable;
-        foo.version = "1.2.3";
+        foo.version = {1, 2, 3};
         foo.sources = {"a.cpp", "b.cpp", "c.cpp"};
         foo.depends = {"foo"};
         foo.definitions = {"-DFOOFOO", "-DFOOBAR"};

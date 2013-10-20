@@ -50,7 +50,17 @@ struct target_t
         shared_library,
         static_library
     } type;
-    std::string version;
+    struct version_t
+    {
+        int major;
+        int minor;
+        int patch;
+        
+        version_t();
+        version_t(int major, int minor, int patch);
+        
+        bool empty() const;
+    } version;
     std::vector<std::string> sources;
     std::vector<std::string> depends;
     std::vector<std::string> definitions;

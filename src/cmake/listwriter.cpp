@@ -165,13 +165,13 @@ void list_rewriter_t::comment(const char* c, const char* end)
                     
                     if(!target.version.empty())
                     {
-                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY VERSION " << target.version << " )\n";
+                        os << "SET( " << target_var << "_MAJOR_VERSION " << target.version.major << " )\n";
+                        os << "SET( " << target_var << "_MINOR_VERSION " << target.version.minor << " )\n";
+                        os << "SET( " << target_var << "_PATCH_VERSION " << target.version.patch << " )\n";
+                        os << "SET( " << target_var << "_VERSION ${" << target_var << "_MAJOR_VERSION}.${" << target_var << "_MINOR_VERSION}.${" << target_var << "_PATCH_VERSION} )\n";
+                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY VERSION ${" << target_var << "_VERSION} )\n";
                         if(target.type == target_t::shared_library)
-                        {
-                            auto pos = target.version.find('.');
-                            if(pos != std::string::npos)
-                                os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY SOVERSION " << target.version.substr(0, pos) << " )\n";
-                        }
+                            os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY SOVERSION ${" << target_var << "_MAJOR_VERSION} )\n";
                     }
 
                     if(!target.packages.empty())

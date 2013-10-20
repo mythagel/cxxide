@@ -331,13 +331,22 @@ void list_reader_t::end_command()
                         throw error("Unexpected variable to SET command in Target Properties");
                     auto target_name = var.substr(0, pos);
                     var = var.substr(pos);
-                    if(var != "_SOURCES")
-                        throw error("Unexpected variable to SET command in Target Properties");
                     
                     auto target = target_nx(target_name);
                     
-                    for(size_t i = 1; i < command.args.size(); ++i)
-                        target->sources.push_back(command.args[i]);
+                    if(var == "_SOURCES")
+                        for(size_t i = 1; i < command.args.size(); ++i)
+                            target->sources.push_back(command.args[i]);
+                    else if(var == "_MAJOR_VERSION")
+                        target->version.major = atoi(command.args[1].c_str());
+                    else if(var == "_MINOR_VERSION")
+                        target->version.minor = atoi(command.args[1].c_str());
+                    else if(var == "_PATCH_VERSION")
+                        target->version.patch = atoi(command.args[1].c_str());
+                    else if(var == "_VERSION")
+                        ; // Generated
+                    else
+                        throw error("Unexpected variable to SET command in Target Properties");
                     
                     break;
                 }
@@ -453,11 +462,11 @@ void list_reader_t::end_command()
                     }
                     else if(prop == "VERSION")
                     {
-                        target->version = *it;
+                        // Generated from VERSION_*
                     }
                     else if(prop == "SOVERSION")
                     {
-                        // Generated from VERSION
+                        // Generated from VERSION_*
                     }
                     else
                         throw error(std::string("Unexpected property in Target Properties: ") + prop);

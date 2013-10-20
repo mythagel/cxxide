@@ -37,6 +37,10 @@
 #include "listwriter.h"
 #include "listreader.h"
 
+// Glibc defines these unneeded macros
+#undef major
+#undef minor
+
 namespace cxxide
 {
 namespace cmake
@@ -53,6 +57,22 @@ error::~error() noexcept
 target_t::target_t()
  : type(executable)
 {
+}
+
+target_t::version_t::version_t()
+ : major(), minor(), patch()
+{
+}
+
+
+target_t::version_t::version_t(int major, int minor, int patch)
+ : major(major), minor(minor), patch(patch)
+{
+}
+
+bool target_t::version_t::empty() const
+{
+    return !(major || minor || patch);
 }
 
 configuration_t::configuration_t()
