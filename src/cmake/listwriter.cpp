@@ -159,7 +159,21 @@ void list_rewriter_t::comment(const char* c, const char* end)
                             os << "ADD_LIBRARY( " << target.name << " STATIC ${" << target_var << "_SOURCES} )\n";
                             break;
                     }
+
+                    if(!target.label.empty())
+                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
                     
+                    if(!target.version.empty())
+                    {
+                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY VERSION " << target.version << " )\n";
+                        if(target.type == target_t::shared_library)
+                        {
+                            auto pos = target.version.find('.');
+                            if(pos != std::string::npos)
+                                os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY SOVERSION " << target.version.substr(0, pos) << " )\n";
+                        }
+                    }
+
                     if(!target.packages.empty())
                     {
                         os << "SET_TARGET_PACKAGES( TARGET " << target.name << " PACKAGES ";
@@ -190,14 +204,6 @@ void list_rewriter_t::comment(const char* c, const char* end)
                             os << "\n    " << include << " ";
                         os << ")\n";
                     }
-                    
-                    if(!target.label.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
-                    
-                    // TODO version
-                    //SET_PROPERTY( TARGET foo PROPERTY VERSION 0.0.0 )
-                    //SET_PROPERTY( TARGET foo PROPERTY SOVERSION 0 )
-
                     
                     if(!target.link_flags.empty())
                         os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \"" << target.link_flags << "\" )\n";

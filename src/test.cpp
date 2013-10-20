@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sstream>
+#include <iterator>
 
 using namespace cxxide;
 
@@ -25,6 +26,81 @@ void print_exception(const std::exception& e, int level = 0)
     }
 }
 
+std::string str(const cmake::target_t& target, int level)
+{
+    std::stringstream s;
+    std::string p(level, ' ');
+    
+    s << p << "target: " << target.name << "\n";
+    
+    if(!target.label.empty())
+        s << p << "label: " << target.label << "\n";
+
+    switch(target.type)
+    {
+        case cmake::target_t::executable:
+            s << p << "type: executable\n";
+            break;
+        case cmake::target_t::shared_library:
+            s << p << "type: shared library\n";
+            break;
+        case cmake::target_t::static_library:
+            s << p << "type: static library\n";
+            break;
+    }
+    if(!target.version.empty())
+        s << p << "version: " << target.version << "\n";
+    
+    if(!target.sources.empty())
+    {
+        s << p << "sources: ";
+        std::copy(begin(target.sources), end(target.sources), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    if(!target.depends.empty())
+    {
+        s << p << "depends: ";
+        std::copy(begin(target.depends), end(target.depends), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    if(!target.definitions.empty())
+    {
+        s << p << "definitions: ";
+        std::copy(begin(target.definitions), end(target.definitions), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    if(!target.includes.empty())
+    {
+        s << p << "includes: ";
+        std::copy(begin(target.includes), end(target.includes), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    if(!target.compile_flags.empty())
+        s << p << "compile_flags: " << target.compile_flags << "\n";
+    if(!target.link_flags.empty())
+        s << p << "link_flags: " << target.link_flags << "\n";
+    
+    if(!target.libs.empty())
+    {
+        s << p << "libs: ";
+        std::copy(begin(target.libs), end(target.libs), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    if(!target.packages.empty())
+    {
+        s << p << "packages: ";
+        std::copy(begin(target.packages), end(target.packages), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+    
+    return s.str();
+}
+
 std::string str(const std::string& name, const cmake::directory_t& dir, int level)
 {
     std::stringstream s;
@@ -35,8 +111,10 @@ std::string str(const std::string& name, const cmake::directory_t& dir, int leve
         s << p << "define: '" << def << "'\n";
     for(auto& inc : dir.includes)
         s << p << "include: '" << inc << "'\n";
-    s << p << "cxx_flags: '" << dir.compile_flags.cxx << "'\n";
-    s << p << "c_flags: '" << dir.compile_flags.c << "'\n";
+    if(!dir.compile_flags.cxx.empty())
+        s << p << "cxx_flags: '" << dir.compile_flags.cxx << "'\n";
+    if(!dir.compile_flags.c.empty())
+        s << p << "c_flags: '" << dir.compile_flags.c << "'\n";
     for(auto& f : dir.configure_files)
         s << p << "conf_file: '" << f.input << "' -> '" << f.output << "'\n";
     for(auto& f : dir.files)
@@ -47,10 +125,11 @@ std::string str(const std::string& name, const cmake::directory_t& dir, int leve
         s << "'" << f.compile_flags << "'\n";
     }
     
-    // TODO targets;
+    for(auto& t : dir.targets)
+        s << str(t, level);
     
     for(auto& d : dir.subdirectories)
-        s << str(d.first, d.second, ++level);    
+        s << str(name + '/' + d.first, d.second, ++level);    
     
     return s.str();
 }
@@ -63,7 +142,7 @@ std::string str(const cmake::configuration_t& config)
     s << (config.managed?"managed":"unmanaged") << "\n";
     for(auto& pkg : config.packages)
         s << "pkg: " << pkg << "\n";
-    s << str("root", config.directory, 0);
+    s << str("root", config.directory, 1);
     s << "\n";
     return s.str();
 }

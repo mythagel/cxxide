@@ -59,6 +59,8 @@ struct target_t
     std::string link_flags;
     std::vector<std::string> libs;
     std::vector<std::string> packages;
+    
+    target_t();
 };
 
 struct file_t

@@ -50,6 +50,11 @@ error::~error() noexcept
 {
 }
 
+target_t::target_t()
+ : type(executable)
+{
+}
+
 configuration_t::configuration_t()
  : managed(true)
 {
@@ -295,12 +300,12 @@ project_t create(const std::string& name, const std::string& source_path, const 
 
     {
         std::ofstream os(source_path + '/' + "CMakeLists.txt");
-        os << "CMAKE_MINIMUM_REQUIRED(VERSION 2.8)\n";
-        os << "PROJECT(" << name << ")\n";
+        os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
+        os << "PROJECT( " << name << " )\n";
         os << "\n";
         os << "##<< Managed Configuration >>##\n";
-        os << "SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\")\n";
-        os << "include(cxxide)\n";
+        os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
+        os << "INCLUDE( cxxide )\n";
         os << "\n";
         os << "##<< Referenced Packages >>##\n";
         os << "##<< Referenced Packages >>##\n";

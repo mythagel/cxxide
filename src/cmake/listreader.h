@@ -65,6 +65,7 @@ private:
             ADD_SUBDIRECTORY,
             SET_PROPERTY,
             ADD_EXECUTABLE,
+            ADD_LIBRARY,
             SET_TARGET_PACKAGES,
             SET_TARGET_LIBRARIES,
             ADD_DEPENDENCIES

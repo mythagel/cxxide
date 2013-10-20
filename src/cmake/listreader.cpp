@@ -59,6 +59,8 @@ list_reader_t::command_t::command_t(std::string cmd_name)
         type = SET_PROPERTY;
     else if(cmd_name == "ADD_EXECUTABLE")
         type = ADD_EXECUTABLE;
+    else if(cmd_name == "ADD_LIBRARY")
+        type = ADD_LIBRARY;
     else if(cmd_name == "SET_TARGET_PACKAGES")
         type = SET_TARGET_PACKAGES;
     else if(cmd_name == "SET_TARGET_LIBRARIES")
@@ -187,6 +189,8 @@ void list_reader_t::end_command()
                             throw error("Unexpected argument format to SET command in Directory Properties");
                         
                         auto flags = command.args[1].substr(18);
+                        if(!flags.empty() && flags[0] == ' ')
+                            flags = flags.substr(1);
                         directory->compile_flags.cxx = flags;
                     }
                     else if(command.args[0] == "CMAKE_C_FLAGS")
@@ -195,6 +199,8 @@ void list_reader_t::end_command()
                             throw error("Unexpected argument format to SET command in Directory Properties");
                         
                         auto flags = command.args[1].substr(16);
+                        if(!flags.empty() && flags[0] == ' ')
+                            flags = flags.substr(1);
                         directory->compile_flags.c = flags;
                     }
                     else
@@ -285,28 +291,111 @@ void list_reader_t::end_command()
         }
         case section_Target:
         {
+            auto target_nx = [this](std::string name) -> target_t*
+            {
+                target_t* target = nullptr;
+                for(auto& t : directory->targets)
+                {
+                    if(t.name == name)
+                        return &t;
+                }
+                
+                boost::to_upper(name);
+                if(!target)
+                {
+                    for(auto& t : directory->targets)
+                    {
+                        auto tname = t.name;
+                        boost::to_upper(tname);
+                        if(tname == name)
+                            return &t;
+                    }
+                }
+                
+                target_t t;
+                t.name = name;   // Uppercased
+                directory->targets.push_back(t);
+                
+                return &directory->targets.back();
+            };
             switch(command.type)
             {
                 case command_t::SET:
                 {
-//SET( FOO_SOURCES 
-//    a.cpp 
-//    b.cpp 
-//    c.cpp )
+                    if(command.args.size() < 2)
+                        throw error("Unexpected arguments to SET command in Target Properties");
+                    
+                    auto var = command.args[0];
+                    auto pos = var.find('_');
+                    if(pos == std::string::npos)
+                        throw error("Unexpected variable to SET command in Target Properties");
+                    auto target_name = var.substr(0, pos);
+                    var = var.substr(pos);
+                    if(var != "_SOURCES")
+                        throw error("Unexpected variable to SET command in Target Properties");
+                    
+                    auto target = target_nx(target_name);
+                    
+                    for(size_t i = 1; i < command.args.size(); ++i)
+                        target->sources.push_back(command.args[i]);
+                    
                     break;
                 }
                 case command_t::ADD_EXECUTABLE:
                 {
-//ADD_EXECUTABLE( foo ${FOO_SOURCES} )
+                    if(command.args.size() != 2)
+                        throw error("Unexpected arguments to ADD_EXECUTABLE command in Target Properties");
+                    
+                    auto target_name = command.args[0];
+                    
+                    auto target = target_nx(target_name);
+                    
+                    target->name = target_name;
+                    target->type = target_t::executable;
+                    break;
+                }
+                case command_t::ADD_LIBRARY:
+                {
+                    if(command.args.size() != 3)
+                        throw error("Unexpected arguments to ADD_LIBRARY command in Target Properties");
+                    
+                    auto target_name = command.args[0];
+                    auto lib_type = command.args[1];
+                    
+                    auto target = target_nx(target_name);
+                    
+                    if(lib_type == "SHARED")
+                        target->type = target_t::shared_library;
+                    else if(lib_type == "STATIC")
+                        target->type = target_t::static_library;
+                    else
+                        throw error(std::string("Unexpected library type in Target Properties: ") + lib_type);
+                    
+                    target->name = target_name;
                     break;
                 }
                 case command_t::SET_TARGET_PACKAGES:
                 {
-//SET_TARGET_PACKAGES( TARGET foo PACKAGES Boost X11 )
+                    if(command.args.size() < 4)
+                        throw error("Unexpected arguments to SET_TARGET_PACKAGES command in Target Properties");
+                    
+                    if(command.args[0] != "TARGET")
+                        throw error("Unexpected arguments to SET_TARGET_PACKAGES command in Target Properties");
+                    
+                    auto target_name = command.args[1];
+                    
+                    auto target = target_nx(target_name);
+
+                    if(command.args[2] != "PACKAGES")
+                        throw error("Unexpected arguments to SET_TARGET_PACKAGES command in Target Properties");
+
+                    for(size_t i = 3; i < command.args.size(); ++i)
+                        target->packages.push_back(command.args[i]);
                     break;
                 }
                 case command_t::SET_PROPERTY:
                 {
+                    // TODO
 //SET_PROPERTY( TARGET foo APPEND_STRING PROPERTY COMPILE_FLAGS "-Wno-unused-parameters" )
 //SET_PROPERTY( TARGET foo APPEND PROPERTY COMPILE_DEFINITIONS FOOFOO FOOBAR )
 //SET_PROPERTY( TARGET foo APPEND PROPERTY INCLUDE_DIRECTORIES 
@@ -318,12 +407,34 @@ void list_reader_t::end_command()
                 }
                 case command_t::SET_TARGET_LIBRARIES:
                 {
-//SET_TARGET_LIBRARIES( TARGET foo LIBS m pthread )
+                    if(command.args.size() < 4)
+                        throw error("Unexpected arguments to SET_TARGET_LIBRARIES command in Target Properties");
+                    
+                    if(command.args[0] != "TARGET")
+                        throw error("Unexpected arguments to SET_TARGET_LIBRARIES command in Target Properties");
+                    
+                    auto target_name = command.args[1];
+                    
+                    auto target = target_nx(target_name);
+
+                    if(command.args[2] != "LIBS")
+                        throw error("Unexpected arguments to SET_TARGET_LIBRARIES command in Target Properties");
+
+                    for(size_t i = 3; i < command.args.size(); ++i)
+                        target->libs.push_back(command.args[i]);
                     break;
                 }
                 case command_t::ADD_DEPENDENCIES:
                 {
-//ADD_DEPENDENCIES( foo foo )
+                    if(command.args.size() < 2)
+                        throw error("Unexpected arguments to ADD_DEPENDENCIES command in Target Properties");
+                    
+                    auto target_name = command.args[0];
+                    
+                    auto target = target_nx(target_name);
+                    
+                    for(size_t i = 1; i < command.args.size(); ++i)
+                        target->depends.push_back(command.args[i]);
                     break;
                 }
                 default:
