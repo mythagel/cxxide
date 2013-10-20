@@ -395,14 +395,73 @@ void list_reader_t::end_command()
                 }
                 case command_t::SET_PROPERTY:
                 {
-                    // TODO
-//SET_PROPERTY( TARGET foo APPEND_STRING PROPERTY COMPILE_FLAGS "-Wno-unused-parameters" )
-//SET_PROPERTY( TARGET foo APPEND PROPERTY COMPILE_DEFINITIONS FOOFOO FOOBAR )
-//SET_PROPERTY( TARGET foo APPEND PROPERTY INCLUDE_DIRECTORIES 
-//    foo 
-//    /usr/include/foo/ )
-//SET_PROPERTY( TARGET foo PROPERTY PROJECT_LABEL "Foo executable" )
-//SET_PROPERTY( TARGET foo APPEND_STRING PROPERTY LINK_FLAGS "-fPIC" )
+                    if(command.args.size() < 4)
+                        throw error("Unexpected arguments to SET_PROPERTY command in Target Properties");
+                    
+                    if(command.args[0] != "TARGET")
+                        throw error("Unexpected arguments to SET_PROPERTY command in Target Properties");
+                    
+                    auto target_name = command.args[1];
+                    
+                    auto target = target_nx(target_name);
+                    
+                    auto it = std::find(begin(command.args), end(command.args), "PROPERTY");
+                    
+                    if(it == end(command.args))
+                        throw error("Unexpected arguments to SET_PROPERTY command in Target Properties");
+                    
+                    if(++it == end(command.args))
+                        throw error("Unexpected arguments to SET_PROPERTY command in Target Properties");
+                    
+                    auto prop = *it;
+                    
+                    if(++it == end(command.args))
+                        throw error("Unexpected arguments to SET_PROPERTY command in Target Properties");
+                    
+                    if(prop == "COMPILE_FLAGS")
+                    {
+                        auto flags = *it;
+                        if(!flags.empty() && flags[0] == ' ')
+                            flags = flags.substr(1);
+                        target->compile_flags = flags;
+                    }
+                    else if(prop == "COMPILE_DEFINITIONS")
+                    {
+                        for(; it != end(command.args); ++it)
+                        {
+                            auto define = *it;
+                            if(!define.empty() && define[0] != '-')
+                                define = "-D" + define;
+                            target->definitions.push_back(define);
+                        }
+                    }
+                    else if(prop == "INCLUDE_DIRECTORIES")
+                    {
+                        for(; it != end(command.args); ++it)
+                            target->includes.push_back(*it);
+                    }
+                    else if(prop == "PROJECT_LABEL")
+                    {
+                        target->label = *it;
+                    }
+                    else if(prop == "LINK_FLAGS")
+                    {
+                        auto flags = *it;
+                        if(!flags.empty() && flags[0] == ' ')
+                            flags = flags.substr(1);
+                        target->link_flags = flags;
+                    }
+                    else if(prop == "VERSION")
+                    {
+                        target->version = *it;
+                    }
+                    else if(prop == "SOVERSION")
+                    {
+                        // Generated from VERSION
+                    }
+                    else
+                        throw error(std::string("Unexpected property in Target Properties: ") + prop);
+                    
                     break;
                 }
                 case command_t::SET_TARGET_LIBRARIES:
