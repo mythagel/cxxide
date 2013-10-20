@@ -134,6 +134,10 @@ void list_rewriter_t::comment(const char* c, const char* end)
             if(skip)
             {
                 os << "\n";
+                /*
+                TODO write targets in individual sections
+                so they can be made conditional etc.
+                */
                 for(auto& target : directory.targets)
                 {
                     std::string target_var = target.name;
@@ -263,6 +267,9 @@ void list_rewriter_t::end_command()
 {
     if(skip) return;
     // ni
+}
+void list_rewriter_t::eof()
+{
 }
 
 }

@@ -91,6 +91,7 @@ public:
     void close_bracket() override;
     void argument(const char* c, const char* end, bool /*quoted*/) override;
     void end_command() override;
+    void eof() override;
 
     virtual ~list_reader_t() = default;
 };

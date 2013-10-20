@@ -512,6 +512,9 @@ void list_reader_t::end_command()
         }
     }
 }
+void list_reader_t::eof()
+{
+}
 
 }
 }

@@ -368,6 +368,7 @@ void listparser_t::parse(const char* c, const char* const end)
 		else
 			throw parse_error{"expected wsp / comment / command"};
 	}
+	eof();
 }
 
 listparser_t::~listparser_t()

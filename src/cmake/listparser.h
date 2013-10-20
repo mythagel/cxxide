@@ -37,6 +37,7 @@ public:
 	virtual void close_bracket() =0;
 	virtual void argument(const char* c, const char* const end, bool quoted) =0;
 	virtual void end_command() =0;
+	virtual void eof() =0;
 
 	/*
 	 * TODO doc.
