@@ -290,7 +290,7 @@ void project_t::generate()
     {
         system::stream_t stream;
         
-        auto args = std::vector<std::string>({"cmake", source_path, "-GNinja"});
+        auto args = std::vector<std::string>({"cmake", source_path, "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
         
         int err = system::exec(build_path, args, &stream);
         if(err) throw error("cmake: " + stream.err);
