@@ -118,7 +118,8 @@ configuration_t read(const std::string& root_path);
 
 class project_t
 {
-friend project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);;
+friend project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
+friend project_t open(const std::string& source_path, const std::string& build_path);
 
 private:
     std::string source_path;
@@ -126,11 +127,14 @@ private:
     
     configuration_t configuration;
 public:
+    std::string name() const;
+
     void generate();
     void build();
 };
 
 project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
+project_t open(const std::string& source_path, const std::string& build_path);
 
 }
 }

@@ -187,7 +187,7 @@ void list_rewriter_t::comment(const char* c, const char* end)
                     }
                     
                     if(!target.compile_flags.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \"" << target.compile_flags << "\" )\n";
+                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << target.compile_flags << "\" )\n";
                     
                     if(!target.definitions.empty())
                     {
@@ -210,7 +210,7 @@ void list_rewriter_t::comment(const char* c, const char* end)
                     }
                     
                     if(!target.link_flags.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \"" << target.link_flags << "\" )\n";
+                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \" " << target.link_flags << "\" )\n";
                     
                     if(!target.libs.empty())
                     {

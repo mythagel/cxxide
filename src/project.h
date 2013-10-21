@@ -43,13 +43,15 @@ struct error : std::runtime_error
 class project_t
 {
 friend project_t create(const std::string& name, const std::string& path, const std::string& build_path);
+friend project_t open(const std::string& path, const std::string& build_path);
 
 private:
-    std::string name;
     git::repo_t repo;
     cmake::project_t config;
-    std::string build_path;
 public:
+
+    std::string name() const;
+
 //    // dvcs
 //    push();
 //    pull();
@@ -58,29 +60,16 @@ public:
 //    merge();
 //    
 //    // build
-//    void configure();
-//    void build();
+    void generate();
+    void build();
 //    
 //    // code insight
     ~project_t();
 };
 
-/*
-// check path exists
-// check path/name does NOT exist
-// 
-// create folder path/name
-// git init
-// create cmake decl adapter file
-// create CMakelists.txt file
-//*/
 project_t create(const std::string& name, const std::string& path, const std::string& build_path);
 
-///*
-// open path/CMakelists.txt
-// open git repo
-//*/
-//project_t open(const std::string& source_path, const std::string& build_path);
+project_t open(const std::string& path, const std::string& build_path);
 
 ///*
 // git clone url into path

@@ -211,6 +211,8 @@ int main(int argc, char* argv[])
         
         cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
         
+        //project.generate();
+        
         {
             std::cout << std::string(40, '-') << "\n";
             auto config = cmake::read(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name);
@@ -223,6 +225,11 @@ int main(int argc, char* argv[])
             }
             if(read != written)
                 std::cout << "ERROR - WRITTEN AND READ DIFFER!\n";
+        }
+        
+        {
+            auto project = project::open("/home/nicholas/dev/build/cxxide/projects/" + project_name, "/home/nicholas/dev/build/cxxide/projects/build/" + project_name);
+            std::cout << "name: " << project.name() << "\n";
         }
     }
     catch(const std::exception& e)

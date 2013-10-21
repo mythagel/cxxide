@@ -279,6 +279,11 @@ configuration_t read(const std::string& root_path)
     }
 }
 
+std::string project_t::name() const
+{
+    return configuration.name;
+}
+
 void project_t::generate()
 {
     try
@@ -292,7 +297,7 @@ void project_t::generate()
     }
     catch(...)
     {
-        std::throw_with_nested(error("project::generate failed"));
+        std::throw_with_nested(error("cmake::generate failed"));
     }
 }
 void project_t::build()
@@ -308,93 +313,117 @@ void project_t::build()
     }
     catch(...)
     {
-        std::throw_with_nested(error("project::build failed"));
+        std::throw_with_nested(error("cmake::build failed"));
     }
 }
 
 project_t create(const std::string& name, const std::string& source_path, const std::string& build_path)
 {
-    project_t project;
-    project.source_path = source_path;
-    project.build_path = build_path;
-
+    try
     {
-        std::ofstream os(source_path + '/' + "CMakeLists.txt");
-        os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
-        os << "PROJECT( " << name << " )\n";
-        os << "\n";
-        os << "##<< Managed Configuration >>##\n";
-        os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
-        os << "INCLUDE( cxxide )\n";
-        os << "\n";
-        os << "##<< Referenced Packages >>##\n";
-        os << "##<< Referenced Packages >>##\n";
-        os << "\n";
-        os << "##<< Directory Properties >>##\n";
-        os << "##<< Directory Properties >>##\n";
-        os << "\n";
-        os << "##<< File Properties >>##\n";
-        os << "##<< File Properties >>##\n";
-        os << "\n";
-        os << "##<< Target Properties >>##\n";
-        os << "##<< Target Properties >>##\n";
-        os << "\n";
-    }
+        project_t project;
+        project.source_path = source_path;
+        project.build_path = build_path;
 
+        {
+            std::ofstream os(source_path + '/' + "CMakeLists.txt");
+            os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
+            os << "PROJECT( " << name << " )\n";
+            os << "\n";
+            os << "##<< Managed Configuration >>##\n";
+            os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
+            os << "INCLUDE( cxxide )\n";
+            os << "\n";
+            os << "##<< Referenced Packages >>##\n";
+            os << "##<< Referenced Packages >>##\n";
+            os << "\n";
+            os << "##<< Directory Properties >>##\n";
+            os << "##<< Directory Properties >>##\n";
+            os << "\n";
+            os << "##<< File Properties >>##\n";
+            os << "##<< File Properties >>##\n";
+            os << "\n";
+            os << "##<< Target Properties >>##\n";
+            os << "##<< Target Properties >>##\n";
+            os << "\n";
+        }
+
+        {
+            int err;
+            err = mkdir((source_path + '/' + "cmake").c_str(), 0777);
+            if(err)
+                throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + ")");
+            err = mkdir((source_path + '/' + "cmake" + '/' + "Modules").c_str(), 0777);
+            if(err)
+                throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + '/' + "Modules" + ")");
+
+            std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "cxxide.cmake");
+            os << "INCLUDE( CMakeParseArguments )\n";
+            os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
+            os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
+            os << "    FOREACH(library IN LISTS arg_LIBS)\n";
+            os << "        FIND_LIBRARY(LIB ${library})\n";
+            os << "        LIST(APPEND LIBS ${LIB})\n";
+            os << "    ENDFOREACH()\n";
+            os << "    TARGET_LINK_LIBRARIES(${arg_TARGET} ${LIBS})\n";
+            os << "ENDFUNCTION()\n";
+            os << "\n";
+            os << "FUNCTION( SET_TARGET_PACKAGES )\n";
+            os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"PACKAGES\" ${ARGV})\n";
+            os << "    FOREACH(package IN LISTS arg_PACKAGES)\n";
+            os << "        STRING(TOUPPER \"${package}\" upper_package)\n";
+            os << "\n";        
+            os << "        IF(\"${package}_FOUND\")\n";
+            os << "            SET(PKG ${package})\n";
+            os << "        ELSEIF(\"${upper_package}_FOUND\")\n";
+            os << "            SET(PKG ${upper_package})\n";
+            os << "        ELSE()\n";
+            os << "            # Not actually an accurate message - more accurate is that it is not recognised.\n";
+            os << "            MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${arg_TARGET}' NOTFOUND\")\n";
+            os << "        ENDIF()\n";
+            os << "\n";        
+            os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
+            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${${PKG}_DEFINITIONS})\n";
+            os << "        ENDIF()\n";
+            os << "\n";        
+            os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
+            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIRS})\n";
+            os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
+            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIR})\n";
+            os << "        ENDIF()\n";
+            os << "\n";        
+            os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
+            os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARIES})\n";
+            os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
+            os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARY})\n";
+            os << "        ENDIF()\n";
+            os << "    ENDFOREACH()\n";
+            os << "ENDFUNCTION()\n";
+        }
+
+        return project;
+    }
+    catch(...)
     {
-        int err;
-        err = mkdir((source_path + '/' + "cmake").c_str(), 0777);
-        if(err)
-            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + ")");
-        err = mkdir((source_path + '/' + "cmake" + '/' + "Modules").c_str(), 0777);
-        if(err)
-            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + '/' + "Modules" + ")");
-
-        std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "cxxide.cmake");
-        os << "INCLUDE( CMakeParseArguments )\n";
-        os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
-        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
-        os << "    FOREACH(library IN LISTS arg_LIBS)\n";
-        os << "        FIND_LIBRARY(LIB ${library})\n";
-        os << "        LIST(APPEND LIBS ${LIB})\n";
-        os << "    ENDFOREACH()\n";
-        os << "    TARGET_LINK_LIBRARIES(${arg_TARGET} ${LIBS})\n";
-        os << "ENDFUNCTION()\n";
-        os << "\n";
-        os << "FUNCTION( SET_TARGET_PACKAGES )\n";
-        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"PACKAGES\" ${ARGV})\n";
-        os << "    FOREACH(package IN LISTS arg_PACKAGES)\n";
-        os << "        STRING(TOUPPER \"${package}\" upper_package)\n";
-        os << "\n";        
-        os << "        IF(\"${package}_FOUND\")\n";
-        os << "            SET(PKG ${package})\n";
-        os << "        ELSEIF(\"${upper_package}_FOUND\")\n";
-        os << "            SET(PKG ${upper_package})\n";
-        os << "        ELSE()\n";
-        os << "            # Not actually an accurate message - more accurate is that it is not recognised.\n";
-        os << "            MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${arg_TARGET}' NOTFOUND\")\n";
-        os << "        ENDIF()\n";
-        os << "\n";        
-        os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${${PKG}_DEFINITIONS})\n";
-        os << "        ENDIF()\n";
-        os << "\n";        
-        os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIRS})\n";
-        os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
-        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIR})\n";
-        os << "        ENDIF()\n";
-        os << "\n";        
-        os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
-        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARIES})\n";
-        os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
-        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARY})\n";
-        os << "        ENDIF()\n";
-        os << "    ENDFOREACH()\n";
-        os << "ENDFUNCTION()\n";
+        std::throw_with_nested(error("cmake::create failed"));
     }
+}
 
-    return project;
+project_t open(const std::string& source_path, const std::string& build_path)
+{
+    try
+    {
+        project_t project;
+        project.source_path = source_path;
+        project.build_path = build_path;
+        project.configuration = cmake::read(project.source_path);
+        
+        return project;
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("cmake::open failed"));
+    }
 }
 
 }

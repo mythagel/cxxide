@@ -45,6 +45,20 @@ error::~error() noexcept
 {
 }
 
+std::string project_t::name() const
+{
+    return config.name();
+}
+
+void project_t::generate()
+{
+    config.generate();
+}
+void project_t::build()
+{
+    config.build();
+}
+
 project_t::~project_t()
 {
 }
@@ -142,6 +156,28 @@ project_t create(const std::string& name, const std::string& path, const std::st
     catch(...)
     {
         std::throw_with_nested(error("project::create failed"));
+    }
+}
+
+project_t open(const std::string& path, const std::string& build_path)
+{
+    if(path.empty())
+        throw error("source path empty");
+    if(build_path.empty())
+        throw error("build path empty");
+
+    try
+    {
+        project_t project;
+        
+        project.repo = git::open(path);
+        project.config = cmake::open(path, build_path);
+
+        return project;
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("project::open failed"));
     }
 }
 
