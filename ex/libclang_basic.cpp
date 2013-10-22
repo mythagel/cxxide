@@ -15,7 +15,6 @@ std::vector<char*> convert_args(const std::vector<std::string>& args)
     
     for(auto& arg : args)
         argv.push_back(const_cast<char*>(arg.c_str()));
-    argv.push_back(nullptr);
     
     return argv;
 }
