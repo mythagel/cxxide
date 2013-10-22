@@ -11,6 +11,12 @@ ADD_DEPENDENCIES(experiments xcb_basic)
 #TARGET_LINK_LIBRARIES(clang_basic xcb)
 #ADD_DEPENDENCIES(experiments clang_basic)
 
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/deps/llvm/tools/clang/include/)
+ADD_EXECUTABLE(libclang_basic EXCLUDE_FROM_ALL libclang_basic.cpp)
+TARGET_LINK_LIBRARIES(libclang_basic libclang)
+ADD_DEPENDENCIES(experiments libclang_basic)
+
+
 FIND_PACKAGE(X11 REQUIRED)
 
 INCLUDE_DIRECTORIES(${X11_INCLUDE_DIR} ${X11_Xt_INCLUDE_PATH})
@@ -57,3 +63,5 @@ ADD_DEPENDENCIES(experiments git_basic)
 
 ADD_EXECUTABLE(hash_image EXCLUDE_FROM_ALL hash_image.cpp)
 ADD_DEPENDENCIES(experiments hash_image)
+
+
