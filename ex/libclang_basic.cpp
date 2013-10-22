@@ -121,7 +121,9 @@ struct compilation_db
                 throw error("unable to reparse tu");
             }
             
-            std::cerr << "parsed\n";
+            auto str = clang_getTranslationUnitSpelling(tu);
+            std::cerr << "parsed: " << clang_getCString(str) << "\n";
+            clang_disposeString(str);
             
             // null action?!
             
@@ -143,6 +145,9 @@ int main()
     clang::compilation_db db("/home/nicholas/dev/build/cxxide");
     
     db.index_db(idx);
+    
+    char c;
+    std::cin >> c;
     
     return 0;
 }
