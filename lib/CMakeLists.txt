@@ -1,2 +1,3 @@
 
 #ADD_SUBDIRECTORY(xxx)
+ADD_SUBDIRECTORY(template)
