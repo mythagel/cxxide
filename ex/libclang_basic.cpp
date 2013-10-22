@@ -1,5 +1,5 @@
-#include "clang-c/Index.h"
-#include "clang-c/CXCompilationDatabase.h"
+#include <clang-c/Index.h>
+#include <clang-c/CXCompilationDatabase.h>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -141,7 +141,7 @@ struct compilation_db
 int main()
 {
     clang::index idx;
-    clang::compilation_db db("/home/nicholas/Development/build/cxxide");
+    clang::compilation_db db("/home/nicholas/dev/build/cxxide");
     
     db.index_db(idx);
     
