@@ -35,3 +35,6 @@ Cmake style variables, example from eclipse
     #define ${include_guard}
     
     #endif
+
+Clang tasks do not exist
+ * need to investigate libindex for general usage - then perhaps use direct API for extra functions
