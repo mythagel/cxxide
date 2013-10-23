@@ -54,3 +54,11 @@ cxxide functions and what is required from clang
     * This reduces latency given code completion results take noticible time.
     * Need to be requested async and then filtered as user continues typing.
     * Clang interface to code completion is incredibly simple given how complicated the actual function is.
+ * Logical code view
+    * Requirement are not yet clearly specified
+    * Match headers and source
+    * list namespace / decl tree
+ * Diagnostics
+    * Take diagnostics from parse/reparse of file and intersperse into document via annotations.
+    * Also affects how the text is rendered (squiggly line).
+
