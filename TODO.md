@@ -1,6 +1,13 @@
 TODO / Task List
 ================
 
+Move
+ * src/{cmake,git,system}/ => lib/{cmake,git,system}
+Replace
+ * lib/system with boost alternatives
+ * boost fs is a linked lib - no worries
+
+
 Git project init / open complete
  * Other tasks can be implemented later as needed
 
