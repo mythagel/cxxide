@@ -48,6 +48,7 @@ cxxide functions and what is required from clang
     * Not considered in this module is diagnostics
     * same text annotation subsystem but different annotations
     * Edit loop highlighting to re-lex current text edit range and do syntax highlighting only.
+    * highlight globals, locals, parameters & members distinctly
  * Code completion
     * recommendation is to get all completions at last logical point (i.e. var->blah requests clang completion at var->.
     * Then client filters for currently entered text.
@@ -69,5 +70,6 @@ cxxide functions and what is required from clang
     * i.e. structs containing blah
     * enum type
     * /cxxide::string
-
+ * Highlight uses
+    * find references for cursor and map back to source locations.
 
