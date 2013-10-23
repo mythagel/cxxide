@@ -48,4 +48,9 @@ cxxide functions and what is required from clang
     * Not considered in this module is diagnostics
     * same text annotation subsystem but different annotations
     * Edit loop highlighting to re-lex current text edit range and do syntax highlighting only.
- * 
+ * Code completion
+    * recommendation is to get all completions at last logical point (i.e. var->blah requests clang completion at var->.
+    * Then client filters for currently entered text.
+    * This reduces latency given code completion results take noticible time.
+    * Need to be requested async and then filtered as user continues typing.
+    * Clang interface to code completion is incredibly simple given how complicated the actual function is.
