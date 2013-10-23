@@ -14,10 +14,10 @@ clang ast visitor
 clang LibFormat for code formatter.
 
 
-Xaw
+X11
 ===============
 http://xdvi.cvs.sourceforge.net/viewvc/xdvi/xdvik/texk/xdvik/xdvi.c?view=markup
-Good examples of icons, document display, fullscreen, set window size, app resources...
+Good examples of icons, document display, fullscreen, set window size
 
  * set_icon_and_title
  * set_windowsize
