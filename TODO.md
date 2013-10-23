@@ -58,7 +58,16 @@ cxxide functions and what is required from clang
     * Requirement are not yet clearly specified
     * Match headers and source
     * list namespace / decl tree
- * Diagnostics
+ * Code error reporting / fixups
     * Take diagnostics from parse/reparse of file and intersperse into document via annotations.
     * Also affects how the text is rendered (squiggly line).
+ * Indexer
+    * List of project includes per TU (recursive)
+    * need to know when file is edited which TU's to reindex.
+ * Semantic Search
+    * Search based on name & type
+    * i.e. structs containing blah
+    * enum type
+    * /cxxide::string
+
 
