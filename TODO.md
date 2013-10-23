@@ -40,7 +40,12 @@ Clang tasks do not exist
  * libclang all the way.
 
 cxxide functions and what is required from clang
-==========================================
+================================================
 
- * Syntax highlighting
-   * 
+ * Semantic highlighting
+    * Need to categorise every token with how to colour/style it.
+    * properties to be set: colour, bold, italic, underline
+    * Not considered in this module is diagnostics
+    * same text annotation subsystem but different annotations
+    * Edit loop highlighting to re-lex current text edit range and do syntax highlighting only.
+ * 
