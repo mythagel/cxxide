@@ -62,9 +62,6 @@ cxxide functions and what is required from clang
  * Code error reporting / fixups
     * Take diagnostics from parse/reparse of file and intersperse into document via annotations.
     * Also affects how the text is rendered (squiggly line).
- * Indexer
-    * List of project includes per TU (recursive)
-    * need to know when file is edited which TU's to reindex.
  * Semantic Search
     * Search based on name & type
     * i.e. structs containing blah
@@ -72,4 +69,12 @@ cxxide functions and what is required from clang
     * /cxxide::string
  * Highlight uses
     * find references for cursor and map back to source locations.
-
+ * Clang Indexer issues / requirements
+    * List of project includes per TU (recursive)
+    * need to know when file is edited which TU's to reindex.
+    * compile_commands.json does not include which TUs are linked into which resulting binary.
+    * Can extract compile commands PER TARGET with ninja
+    * but need to feed the string command to clang as broken down list of arguments
+    * if this is something special may need to extract some logic from clang
+    * create a clang::index per target.
+    * aggreate results from multiple targets / within the current target based on context.
