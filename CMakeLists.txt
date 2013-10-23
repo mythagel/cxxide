@@ -14,8 +14,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-INCLUDE_DIRECTORIES(/usr/lib/llvm-3.4/include/)
-LINK_DIRECTORIES(/usr/lib/llvm-3.4/lib/)
+INCLUDE_DIRECTORIES(/usr/lib/llvm-3.4/include/ /home/nicholas/dev/llvm/tools/clang/include/)
+LINK_DIRECTORIES(/usr/lib/llvm-3.4/lib/ /home/nicholas/dev/llvm-build/lib/)
 
 ADD_SUBDIRECTORY(lib)
 ADD_SUBDIRECTORY(src)

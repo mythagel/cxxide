@@ -31,6 +31,34 @@ struct error : std::runtime_error
     }
 };
 
+// internal helper!
+struct string
+{
+    CXString _str;
+    
+    string(const string&) = delete;
+    string& operator=(const string&) = delete;
+    explicit string(CXString str)
+     : _str(str)
+    {
+    }
+
+    const char* c_str() const
+    {
+        return clang_getCString(_str);
+    }
+
+    std::string str() const
+    {
+        return clang_getCString(_str);
+    }
+
+    ~string()
+    {
+        clang_disposeString(_str);
+    }
+};
+
 // An "index" that consists of a set of translation units that would typically be linked together into an executable or library. 
 struct index
 {
@@ -49,6 +77,31 @@ struct index
     {
         clang_disposeIndex(idx);
     }
+};
+struct translation_unit
+{
+};
+struct cursor
+{
+};
+struct source_range
+{
+};
+struct source_location
+{
+};
+struct file
+{
+};
+
+//CXDiagnosticSet becomes diagnostic_set
+struct diagnostic
+{
+
+};
+struct diagnostic_set
+{
+    
 };
 
 struct compilation_db
@@ -101,9 +154,8 @@ struct compilation_db
             std::vector<std::string> args;
             for (auto i = 0; i < nargs; ++i)
             {
-                auto str_arg = clang_CompileCommand_getArg(cmd, i);
-                args.push_back(clang_getCString(str_arg));
-                clang_disposeString(str_arg);
+                string arg(clang_CompileCommand_getArg(cmd, i));
+                args.push_back(arg.c_str());
             }
             
             auto argv = convert_args(args);
@@ -121,9 +173,11 @@ struct compilation_db
                 throw error("unable to reparse tu");
             }
             
-            auto str = clang_getTranslationUnitSpelling(tu);
-            std::cerr << "parsed: " << clang_getCString(str) << "\n";
-            clang_disposeString(str);
+            std::string filename;
+            {
+                filename = string(clang_getTranslationUnitSpelling(tu)).str();
+                std::cerr << "parsed: " << filename << "\n";
+            }
             
             // null action?!
             
@@ -145,9 +199,6 @@ int main()
     clang::compilation_db db("/home/nicholas/dev/build/cxxide");
     
     db.index_db(idx);
-    
-    char c;
-    std::cin >> c;
     
     return 0;
 }

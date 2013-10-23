@@ -37,4 +37,10 @@ Cmake style variables, example from eclipse
     #endif
 
 Clang tasks do not exist
- * need to investigate libindex for general usage - then perhaps use direct API for extra functions
+ * libclang all the way.
+
+cxxide functions and what is required from clang
+==========================================
+
+ * Syntax highlighting
+   * 
