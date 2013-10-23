@@ -47,6 +47,9 @@ int main( int argc, char *argv[] )
    /* create top level window */
    mainW = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, 
                800, 600, DEFAULT_BDWIDTH, fgpix, bgpix );
+
+    Atom WM_DELETE_WINDOW = XInternAtom(dpy, "WM_DELETE_WINDOW", False); 
+    XSetWMProtocols(dpy, mainW, &WM_DELETE_WINDOW, 1);
    
    /* Xft draw context */
    xftdraw = XftDrawCreate( dpy, mainW, DefaultVisual(dpy,DefaultScreen(dpy)),
@@ -108,6 +111,7 @@ int main( int argc, char *argv[] )
                   force_expose = 0;
                }
                break;
+            case ClientMessage:
             case ButtonPress:
                Done = 1;
                printf("good-bye!\n");
