@@ -190,6 +190,12 @@ int main()
 							StructureNotifyMask | ExposureMask);
 	window.map();
 
+    /*
+     TODO investigate game loops for how to do animations
+     need to be able to invalidate individual rects while in the update phase
+     and then redraw in the redraw phase - WHILE generally sitting idle when there
+     is nothing to draw.
+     */
 	display.run_display_event_loop();
 
 	return 0;
