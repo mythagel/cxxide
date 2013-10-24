@@ -28,15 +28,39 @@ using namespace cxxide;
 
 struct button : cairo::cairo_window_t
 {
-    bool highlight;
+    enum {
+        inactive,
+        active,
+        hover,
+        down
+    } bstate;
     
 	button(x11::window_t& parent)
 	 : cairo_window_t(parent, x11::rectangle_t<int>{50, 50, 50+200, 50+50}),
-	   highlight(false)
+	   bstate(active)
 	{
 		select_events(  ButtonPressMask | ButtonReleaseMask |
 						EnterWindowMask | LeaveWindowMask |
 						StructureNotifyMask | ExposureMask);
+	}
+	
+	virtual void on_mouse_event(const x11::mouse_event_t& mouse_event) override
+	{
+		//window_t::on_mouse_event(mouse_event);
+
+		using namespace x11;
+		switch(mouse_event.type)
+		{
+			case mouse_event_t::Down:
+				fprintf(stderr, "Button Mouse Down, Button: %d\n", mouse_event.button);
+				break;
+			case mouse_event_t::Up:
+				fprintf(stderr, "Button Mouse Up, Button: %d\n", mouse_event.button);
+				break;
+			case mouse_event_t::Move:
+				fprintf(stderr, "Button Mouse Move %dx%d\n", mouse_event.position.x, mouse_event.position.y);
+				break;
+		}
 	}
 	
     virtual void _draw(cairo_t* cr) override
@@ -49,38 +73,64 @@ struct button : cairo::cairo_window_t
           Highlight / contrast colour for entire UI is based on current project name (as used to
           generate the hash image.)
          */
-        if(highlight)
+        switch(bstate)
         {
-            auto draw_fn = cairo::make_stack(
-                colour(0, 0, 0, 1.0, state),
-                paint(state),
-                line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
-                rectangle(0.5, 0.5, 199, 49, state),
-                colour(0.03, 0.15, 1, 1.0, state),
-                stroke(false, state),
-                move_to(25, 40, state),
-                colour(1, 1, 1, 1.0, state),
-                font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
-                text("build", false, state)
-                );
-            
-            draw_fn(cr);
-        }
-        else
-        {
-            auto draw_fn = cairo::make_stack(
-                colour(0, 0, 0, 1.0, state),
-                paint(state),
-                line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
-                colour(0.7, 0.7, 0.7, 1.0, state),
-                rectangle(0.5, 0.5, 199, 49, state),
-                stroke(false, state),
-                move_to(25, 40, state),
-                font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
-                text("build", false, state)
-                );
-            
-            draw_fn(cr);
+            case inactive:
+            {
+                auto draw_fn = cairo::make_stack(
+                    colour(0, 0, 0, 1.0, state),
+                    paint(state),
+                    line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+                    colour(0.3, 0.3, 0.3, 1.0, state),
+                    rectangle(0.5, 0.5, 199, 49, state),
+                    stroke(false, state),
+                    move_to(25, 40, state),
+                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
+                    text("build", false, state)
+                    );
+                
+                draw_fn(cr);
+                break;
+            }
+            case active:
+            {
+                auto draw_fn = cairo::make_stack(
+                    colour(0, 0, 0, 1.0, state),
+                    paint(state),
+                    line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+                    colour(0.7, 0.7, 0.7, 1.0, state),
+                    rectangle(0.5, 0.5, 199, 49, state),
+                    stroke(false, state),
+                    move_to(25, 40, state),
+                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
+                    text("build", false, state)
+                    );
+                
+                draw_fn(cr);
+                break;
+            }
+            case hover:
+            {
+                auto draw_fn = cairo::make_stack(
+                    colour(0, 0, 0, 1.0, state),
+                    paint(state),
+                    line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+                    rectangle(0.5, 0.5, 199, 49, state),
+                    colour(0.03, 0.15, 1, 1.0, state),
+                    stroke(false, state),
+                    move_to(25, 40, state),
+                    colour(1, 1, 1, 1.0, state),
+                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
+                    text("build", false, state)
+                    );
+                
+                draw_fn(cr);
+                break;
+            }
+            case down:
+            {
+                break;
+            }
         }
     }
     
@@ -93,12 +143,12 @@ struct button : cairo::cairo_window_t
 		{
 			case window_event_t::Enter:
 				fprintf(stderr, "Button Enter\n");
-				highlight = true;
+				bstate = hover;
 				draw();
 				break;
 			case window_event_t::Leave:
 				fprintf(stderr, "Button Leave\n");
-				highlight = false;
+				bstate = active;
 				draw();
 				break;
 			case window_event_t::Focus_In:
@@ -109,10 +159,6 @@ struct button : cairo::cairo_window_t
 				break;
 			case window_event_t::Resize:
 				fprintf(stderr, "Button Resize\n");
-				break;
-			case window_event_t::Close:
-				fprintf(stderr, "Button Close\n");
-				display.end_display_event_loop();
 				break;
 		}
 	}
