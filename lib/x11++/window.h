@@ -43,6 +43,8 @@ public:
 
 	void map() const;
 	void unmap() const;
+	
+	void set_title(const std::string& name);
 
 	virtual void draw() = 0;
 

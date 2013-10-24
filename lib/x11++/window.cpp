@@ -53,6 +53,11 @@ void window_t::unmap() const
 	XUnmapWindow(*display, window);
 }
 
+void window_t::set_title(const std::string& name)
+{
+    XStoreName(*display, window, name.c_str());
+}
+
 window_t::operator Window() const
 {
 	return window;

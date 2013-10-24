@@ -14,12 +14,24 @@
 
 using namespace cxxide;
 
+// REALLY going to need to remember this... 
+// http://www.cairographics.org/FAQ/#sharp_lines
+
+//struct component : cairo::cairo_window_t
+//{
+//    component(x11::window_t& parent)
+//     : cairo_window_t(parent, x11::rectangle_t<int>{0, 0, 100, 35}),
+//    {
+//    
+//    }
+//};
+
 struct button : cairo::cairo_window_t
 {
     bool highlight;
     
 	button(x11::window_t& parent)
-	 : cairo_window_t(parent, x11::rectangle_t<int>{0, 0, 100, 35}),
+	 : cairo_window_t(parent, x11::rectangle_t<int>{50, 50, 50+200, 50+50}),
 	   highlight(false)
 	{
 		select_events(  ButtonPressMask | ButtonReleaseMask |
@@ -32,12 +44,24 @@ struct button : cairo::cairo_window_t
         using namespace cairo::drawing;
         
         draw_state state;
+        
+        /*
+          Highlight / contrast colour for entire UI is based on current project name (as used to
+          generate the hash image.)
+         */
         if(highlight)
         {
             auto draw_fn = cairo::make_stack(
-                rounded_rectangle(0, 0, 100, 35, 1, 5, state),
-                colour(1, 0, 0.1, 1.0, state),
-                fill(false, state)
+                colour(0, 0, 0, 1.0, state),
+                paint(state),
+                line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+                rectangle(0.5, 0.5, 199, 49, state),
+                colour(0.03, 0.15, 1, 1.0, state),
+                stroke(false, state),
+                move_to(25, 40, state),
+                colour(1, 1, 1, 1.0, state),
+                font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
+                text("build", false, state)
                 );
             
             draw_fn(cr);
@@ -45,9 +69,15 @@ struct button : cairo::cairo_window_t
         else
         {
             auto draw_fn = cairo::make_stack(
-                rounded_rectangle(0, 0, 100, 35, 1, 5, state),
-                colour(0.5, 0, 0.1, 1.0, state),
-                fill(false, state)
+                colour(0, 0, 0, 1.0, state),
+                paint(state),
+                line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+                colour(0.7, 0.7, 0.7, 1.0, state),
+                rectangle(0.5, 0.5, 199, 49, state),
+                stroke(false, state),
+                move_to(25, 40, state),
+                font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
+                text("build", false, state)
                 );
             
             draw_fn(cr);
@@ -183,9 +213,10 @@ int main()
 
 	main_window window{display};
 
+    window.set_title("cxxide widget test");
 	window.select_events(	KeyPressMask | KeyReleaseMask |
 							ButtonPressMask | ButtonReleaseMask |
-							PointerMotionMask |
+							//PointerMotionMask |
 							EnterWindowMask | LeaveWindowMask |
 							StructureNotifyMask | ExposureMask);
 	window.map();
