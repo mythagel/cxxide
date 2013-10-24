@@ -20,8 +20,6 @@ namespace x11
 
 class window_t;
 
-void thread_init();
-
 class display_t
 {
 private:

@@ -16,10 +16,13 @@ namespace cxxide
 namespace x11
 {
 
-void thread_init()
+struct thread_init_t
 {
-    XInitThreads();
-}
+    thread_init_t()
+    {
+        XInitThreads();
+    }
+} thread_init;
 
 display_t::display_t(const char* display_name)
  : display(XOpenDisplay(display_name))
