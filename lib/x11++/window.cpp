@@ -53,7 +53,7 @@ void window_t::unmap() const
 	XUnmapWindow(*display, window);
 }
 
-Window window_t::operator*() const
+window_t::operator Window() const
 {
 	return window;
 }

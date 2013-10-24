@@ -62,7 +62,7 @@ void display_t::run_display_event_loop()
 		XNextEvent(display, &xevent);
 
 		window_t* window { nullptr };
-		auto win_it = std::find_if(windows.begin(), windows.end(), [&xevent](window_t* window) -> bool { return **window == xevent.xany.window; });
+		auto win_it = std::find_if(windows.begin(), windows.end(), [&xevent](window_t* window) -> bool { return *window == xevent.xany.window; });
 		if(win_it != end(windows))
 			window = *win_it;
 

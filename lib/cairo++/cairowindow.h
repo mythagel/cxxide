@@ -34,7 +34,7 @@ public:
 	};
 
 	cairo_window_t(x11::display_t& display, const x11::rectangle_t<int>& rect) throw (error);
-	cairo_window_t(window_t& parent, const x11::rectangle_t<int>& rect) throw (error);
+	cairo_window_t(x11::window_t& parent, const x11::rectangle_t<int>& rect) throw (error);
 
 	cairo_window_t(const window_t&) = delete;
 	cairo_window_t& operator=(const window_t&) = delete;

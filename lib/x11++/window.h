@@ -50,7 +50,7 @@ public:
 	virtual void on_mouse_event(const mouse_event_t& mouse_event) = 0;
 	virtual void on_window_event(const window_event_t& window_event) = 0;
 
-	Window operator*() const;
+	operator Window() const;
 
 	virtual ~window_t();
 };

@@ -30,7 +30,7 @@ cairo_window_t::cairo_window_t(x11::display_t& display, const x11::rectangle_t<i
 		throw error("Unable to create cairo canvas");
 }
 cairo_window_t::cairo_window_t(window_t& parent, const x11::rectangle_t<int>& rect) throw (error)
- : window_t(display, rect)
+ : window_t(parent, rect)
 {
 	int screen = DefaultScreen(*display);
 	Visual* visual = DefaultVisual(*display, screen);
