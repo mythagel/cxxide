@@ -108,7 +108,7 @@ struct configuration_t
     std::string name;
     bool managed;
     std::set<std::string> packages;
-    directory_t directory;    
+    directory_t directory;
     
     configuration_t();
 };

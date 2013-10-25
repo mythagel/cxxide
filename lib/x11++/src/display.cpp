@@ -10,6 +10,7 @@
 #include "window.h"
 #include "events.h"
 #include "keysym.h"
+#include <poll.h>
 
 namespace cxxide
 {
@@ -29,6 +30,11 @@ display_t::display_t(const char* display_name)
 {
 	if(!display)
 		throw error(std::string("Unable to open display: ") + display_name);
+}
+
+int display_t::fd() const
+{
+    return ConnectionNumber(display);
 }
 
 bool display_t::register_window(window_t* window)
@@ -58,10 +64,16 @@ Atom display_t::get_atom(const std::string& atom_name, bool only_if_exists, bool
 
 void display_t::run_display_event_loop()
 {
+//    pollfd x11;
+//    x11.fd = fd();
+//    x11.events = POLLIN;
+//    x11.revents = 0;
+    
 	terminiate = false;
 	XEvent xevent;
 	while(!terminiate)
 	{
+	    //int err = poll(&x11, 1, );
 		XNextEvent(display, &xevent);
 
 		window_t* window { nullptr };
@@ -295,8 +307,8 @@ void display_t::run_display_event_loop()
 			{
 				XClientMessageEvent& xclient = xevent.xclient;
 
-				Atom wm_delete_window = get_atom("WM_DELETE_WINDOW");
-				if(xclient.data.l[0] == wm_delete_window)
+				auto WM_DELETE_WINDOW = get_atom("WM_DELETE_WINDOW");
+				if(xclient.data.l[0] == WM_DELETE_WINDOW)
 				{
 					window_event_t window_event;
 					window_event.type = window_event_t::Close;

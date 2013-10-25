@@ -17,16 +17,45 @@ using namespace cxxide;
 // REALLY going to need to remember this... 
 // http://www.cairographics.org/FAQ/#sharp_lines
 
-//struct component : cairo::cairo_window_t
-//{
-//    component(x11::window_t& parent)
-//     : cairo_window_t(parent, x11::rectangle_t<int>{0, 0, 100, 35}),
-//    {
-//    
-//    }
-//};
+struct component : cairo::cairo_window_t
+{
+    component(x11::window_t& parent, const x11::rectangle_t<int>& rect)
+     : cairo_window_t(parent, rect)
+    {
+    }
+};
 
-struct button : cairo::cairo_window_t
+/* Widgets needed
+
+button (perform action text and image label)
+    states: inactive, idle, hover, hold
+label (display information icon and text)
+edit (user input)
+switch (on/off toggle)
+progress (progress notification bar and spinner style)
+progress spinner (indetermine progress notification)
+treeview (arrows visible on hover. nesting indicated by whitespace)
+   treeview does not have to be generic.
+   can be specific to purpose (also will show arrow for current document.)
+file selection text box (show autocomplete options as scrolling list)
+list box (for code completion selection)
+code editor (main widget)
+    not generic - specifc to purpose with formatting etc.
+    primary storage of edited text content.
+drop down / radio button (select between small number of alternatives)
+checkbox (select between options not for on/off stuff)
+
+cmake editor
+maybe an active text box
+i.e. type in text gets split by spaces into individual items
+each tiem has a small x to remove it. could click to reorder.
+
+future (not currently used)
+value spinner (+/- to increment value)
+
+*/
+
+struct button : component
 {
     enum {
         inactive,
@@ -36,7 +65,7 @@ struct button : cairo::cairo_window_t
     } bstate;
     
 	button(x11::window_t& parent)
-	 : cairo_window_t(parent, x11::rectangle_t<int>{50, 50, 50+200, 50+50}),
+	 : component(parent, x11::rectangle_t<int>{50, 50, 50+200, 50+50}),
 	   bstate(active)
 	{
 		select_events(  ButtonPressMask | ButtonReleaseMask |
@@ -209,6 +238,7 @@ public:
 		{
 			case mouse_event_t::Down:
 				fprintf(stderr, "Mouse Down, Button: %d\n", mouse_event.button);
+				toggle_fullscreen();
 				break;
 			case mouse_event_t::Up:
 				fprintf(stderr, "Mouse Up, Button: %d\n", mouse_event.button);

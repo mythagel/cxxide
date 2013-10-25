@@ -42,6 +42,7 @@ public:
 	display_t(const display_t&) = delete;
 	display_t& operator=(const display_t&) = delete;
 
+    int fd() const;
 
 	bool register_window(window_t* window);
 	bool unregister_window(window_t* window);

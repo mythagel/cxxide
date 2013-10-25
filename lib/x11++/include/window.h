@@ -45,6 +45,7 @@ public:
 	void unmap() const;
 	
 	void set_title(const std::string& name);
+	bool toggle_fullscreen();
 
 	virtual void draw() = 0;
 

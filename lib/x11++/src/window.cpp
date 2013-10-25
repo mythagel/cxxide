@@ -22,8 +22,9 @@ window_t::window_t(display_t& display, const rectangle_t<int>& rect)
 	if(!window)
 		throw error("Unable to create window");
 
-	Atom wm_delete_window = display.get_atom("WM_DELETE_WINDOW");
-	XSetWMProtocols(*display, window, &wm_delete_window, 1);
+	Atom WM_DELETE_WINDOW = display.get_atom("WM_DELETE_WINDOW", true);
+	if(WM_DELETE_WINDOW)
+    	XSetWMProtocols(*display, window, &WM_DELETE_WINDOW, 1);
 
 	display.register_window(this);
 }
@@ -56,6 +57,32 @@ void window_t::unmap() const
 void window_t::set_title(const std::string& name)
 {
     XStoreName(*display, window, name.c_str());
+}
+
+bool window_t::toggle_fullscreen()
+{
+    auto NET_WM_STATE_FULLSCREEN = display.get_atom("_NET_WM_STATE_FULLSCREEN", true);
+
+    if (NET_WM_STATE_FULLSCREEN)
+    {
+        auto NET_WM_STATE = display.get_atom("_NET_WM_STATE");
+
+        XEvent ev;
+        ev.type = ClientMessage;
+        ev.xclient.serial = 0;
+        ev.xclient.send_event = True;
+        ev.xclient.display = *display;
+        ev.xclient.window = window;
+        ev.xclient.message_type = NET_WM_STATE;
+        ev.xclient.format = 32;
+        ev.xclient.data.l[0] = 2; // _NET_WM_STATE_TOGGLE
+        ev.xclient.data.l[1] = NET_WM_STATE_FULLSCREEN;
+        ev.xclient.data.l[2] = 0L;
+
+        XSendEvent(*display, DefaultRootWindow(*display), False, SubstructureNotifyMask, &ev);
+        return true;
+    }
+    return false;
 }
 
 window_t::operator Window() const
