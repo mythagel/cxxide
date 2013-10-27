@@ -7,7 +7,7 @@
 
 #ifndef SCOPEDCONTEXT_H_
 #define SCOPEDCONTEXT_H_
-#include <cairo.h>
+#include <cairo/cairo.h>
 
 namespace cxxide
 {

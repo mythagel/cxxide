@@ -11,6 +11,7 @@
 #include "drawing.h"
 #include "drawstate.h"
 #include "stack.h"
+#include "scopedcontext.h"
 
 using namespace cxxide;
 
@@ -24,6 +25,22 @@ struct component : cairo::cairo_window_t
     {
     }
 };
+
+struct extents_t
+{
+    int width;
+    int height;
+};
+extents_t text_extents(cairo_t* cr, const std::string& utf8, const std::string& family, cairo_font_slant_t slant, cairo_font_weight_t weight, double size)
+{
+    cairo::scoped_context guard(cr);
+    cairo_select_font_face (cr, family.c_str(), slant, weight);
+    cairo_set_font_size (cr, size);
+    cairo_text_extents_t extents;
+    cairo_text_extents(cr, utf8.c_str(), &extents);
+    
+    return {extents.width, extents.height};
+}
 
 /* Widgets needed
 
@@ -86,15 +103,14 @@ struct button : component
 			case mouse_event_t::Up:
 				fprintf(stderr, "Button Mouse Up, Button: %d\n", mouse_event.button);
 				break;
-			case mouse_event_t::Move:
-				fprintf(stderr, "Button Mouse Move %dx%d\n", mouse_event.position.x, mouse_event.position.y);
-				break;
 		}
 	}
 	
     virtual void _draw(cairo_t* cr) override
     {
         using namespace cairo::drawing;
+        
+        auto size = text_extents(cr, "build", "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32);
         
         draw_state state;
         
@@ -113,7 +129,7 @@ struct button : component
                     colour(0.3, 0.3, 0.3, 1.0, state),
                     rectangle(0.5, 0.5, 199, 49, state),
                     stroke(false, state),
-                    move_to(25, 40, state),
+                    move_to(20, 20, state),
                     font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
                     text("build", false, state)
                     );

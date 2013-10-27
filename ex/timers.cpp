@@ -7,7 +7,7 @@ unsigned int gcd(unsigned int a, unsigned int b)
     else return a;
 }
 
-int gcd (int a, int b)
+int gcd(int a, int b)
 {
     if(a > 0 && b > 0)
         return gcd(static_cast<unsigned int>(a), static_cast<unsigned int>(b));
