@@ -121,6 +121,10 @@ struct button : component
         
         auto size = text_extents(cr, "build", "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32);
         
+        fprintf(stderr, "%d, %d\n", size.width, size.height);
+        
+        move_resize({50, 50, 50+size.width+20, 50+size.height+20});
+        
         draw_state state;
         
         /*
@@ -136,9 +140,9 @@ struct button : component
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
                     colour(0.3, 0.3, 0.3, 1.0, state),
-                    rectangle(0.5, 0.5, 199, 49, state),
+                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
                     stroke(false, state),
-                    move_to(20, 20, state),
+                    move_to(10, 10+size.height, state),
                     font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
                     text("build", false, state)
                     );
@@ -153,9 +157,9 @@ struct button : component
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
                     colour(0.7, 0.7, 0.7, 1.0, state),
-                    rectangle(0.5, 0.5, 199, 49, state),
+                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
                     stroke(false, state),
-                    move_to(25, 40, state),
+                    move_to(10, 10+size.height, state),
                     font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
                     text("build", false, state)
                     );
@@ -169,10 +173,10 @@ struct button : component
                     colour(0, 0, 0, 1.0, state),
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
-                    rectangle(0.5, 0.5, 199, 49, state),
                     colour(0.03, 0.15, 1, 1.0, state),
+                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
                     stroke(false, state),
-                    move_to(25, 40, state),
+                    move_to(10, 10+size.height, state),
                     colour(1, 1, 1, 1.0, state),
                     font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
                     text("build", false, state)

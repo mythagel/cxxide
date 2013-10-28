@@ -18,7 +18,7 @@ Cmake project init / open complete
 Need to implement source manager
  * Creates source file(s) from templates
 
-Sould base project object have concept of license (i.e. project license)
+Should base project object have concept of license (i.e. project license)
  * could then automate license headers in files and include license text
  * Need license list
  * ~/.cxxide/licences/MIT/LICENSE - license text
@@ -85,3 +85,9 @@ cxxide functions and what is required from clang
     * if this is something special may need to extract some logic from clang
     * create a clang::index per target.
     * aggreate results from multiple targets / within the current target based on context.
+
+
+User Interface
+=============
+
+signals as callbacks
