@@ -7,7 +7,7 @@
 
 #ifndef UICAIRODRAWSTATE_H_
 #define UICAIRODRAWSTATE_H_
-#include <cairo/cairo.h>
+#include <cairo.h>
 #include <string>
 
 namespace cxxide

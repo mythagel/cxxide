@@ -7,8 +7,8 @@
 
 #include "cairowindow.h"
 #include "display.h"
-#include <cairo/cairo.h>
-#include <cairo/cairo-xlib.h>
+#include <cairo.h>
+#include <cairo-xlib.h>
 
 namespace cxxide
 {

@@ -85,6 +85,11 @@ bool window_t::toggle_fullscreen()
     return false;
 }
 
+void window_t::move_resize(const rectangle_t<int>& rect)
+{
+    XMoveResizeWindow(*display, window, rect.min.x, rect.min.y, rect.width(), rect.height());
+}
+
 window_t::operator Window() const
 {
 	return window;

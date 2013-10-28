@@ -10,7 +10,7 @@
 #include <array>
 #include <vector>
 #include <cstddef>
-#include <cairo/cairo.h>
+#include <cairo.h>
 #include "draw_fn.h"
 
 namespace cxxide

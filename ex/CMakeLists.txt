@@ -11,9 +11,18 @@ ADD_EXECUTABLE(xft_basic EXCLUDE_FROM_ALL xft_basic.cpp)
 TARGET_LINK_LIBRARIES(xft_basic ${X11_LIBRARIES} ${X11_Xt_LIB} Xft)
 ADD_DEPENDENCIES(experiments xft_basic)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib/x11++/include ${CMAKE_SOURCE_DIR}/lib/cairo++/include)
+INCLUDE(FindPkgConfig)
+PKG_CHECK_MODULES(CAIRO REQUIRED cairo)
+PKG_CHECK_MODULES(PANGOCAIRO REQUIRED pangocairo)
+
+INCLUDE_DIRECTORIES(${CAIRO_INCLUDE_DIRS} ${PANGOCAIRO_INCLUDE_DIRS} 
+${CMAKE_SOURCE_DIR}/lib/x11++/include 
+${CMAKE_SOURCE_DIR}/lib/cairo++/include
+${CMAKE_SOURCE_DIR}/lib/pango++/include
+)
+
 ADD_EXECUTABLE(ui_test EXCLUDE_FROM_ALL ui_test.cpp)
-TARGET_LINK_LIBRARIES(ui_test cairo++)
+TARGET_LINK_LIBRARIES(ui_test cairo++ pango++)
 ADD_DEPENDENCIES(experiments ui_test)
 
 

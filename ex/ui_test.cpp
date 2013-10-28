@@ -18,6 +18,15 @@ using namespace cxxide;
 // REALLY going to need to remember this... 
 // http://www.cairographics.org/FAQ/#sharp_lines
 
+/*
+Containers need measure and then layout passes.
+then draw will use the layed out position
+x11::window_t needs to remember its current geometry
+callback should not have to explicitly call parent - use std::function for callback list.
+window registers with its own callbacks for what is needed.
+no value types - shared_ptr and non-copyable.
+*/
+
 struct component : cairo::cairo_window_t
 {
     component(x11::window_t& parent, const x11::rectangle_t<int>& rect)

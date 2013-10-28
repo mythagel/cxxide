@@ -7,7 +7,7 @@
 
 #ifndef UICAIRODRAWING_H_
 #define UICAIRODRAWING_H_
-#include <cairo/cairo.h>
+#include <cairo.h>
 #include <string>
 #include "stack.h"
 #include "colour.h"

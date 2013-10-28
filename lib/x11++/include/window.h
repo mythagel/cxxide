@@ -46,6 +46,7 @@ public:
 	
 	void set_title(const std::string& name);
 	bool toggle_fullscreen();
+	void move_resize(const rectangle_t<int>& rect);
 
 	virtual void draw() = 0;
 
