@@ -81,6 +81,31 @@ value spinner (+/- to increment value)
 
 */
 
+/*
+
+x11 display has to distribute events to existing windows
+    knows about all created windows
+    uses callbacks to send events to window
+    window callback impl calls signal distribution function
+    then handled.
+
+window class
+top level window
+    contains x11::window, cairo::window (perhaps unneeded)
+    wrap pango in as well.
+    (pango created on demand)
+    contains list of component as child windows
+    
+component
+    child window
+    basically same as above (cairo pango etc.)
+    parent window tracked
+
+need layout passes in window class.
+needs to measure and layout child components (windows)
+
+*/
+
 struct button : component
 {
     enum {
@@ -256,6 +281,18 @@ public:
     {
         using namespace cairo::drawing;
         
+        draw_state state;
+        auto draw_fn = cairo::make_stack(
+            colour(1, 1, 1, 1.0, state),
+            line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
+            move_to(100, 100, state),
+            line_to(100, 120, state),
+            line_to(115, 110, state),
+            line_to(100, 100, state),
+            fill(false, state)
+            );
+        
+        draw_fn(cr);
     }
 	
 	virtual void on_mouse_event(const x11::mouse_event_t& mouse_event) override
