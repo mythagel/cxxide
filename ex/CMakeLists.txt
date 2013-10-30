@@ -1,6 +1,11 @@
 
 ADD_CUSTOM_TARGET(experiments)
 
+ADD_EXECUTABLE(xcbpp EXCLUDE_FROM_ALL xcb.cpp)
+TARGET_LINK_LIBRARIES(xcbpp xcb)
+ADD_DEPENDENCIES(experiments xcbpp)
+
+
 ADD_EXECUTABLE(libclang_basic EXCLUDE_FROM_ALL libclang_basic.cpp)
 TARGET_LINK_LIBRARIES(libclang_basic clang)
 ADD_DEPENDENCIES(experiments libclang_basic)
