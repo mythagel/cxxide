@@ -184,7 +184,7 @@ struct button : component
 		});
 		
 		text = context->make_layout();
-		text->font("Sans 16");
+		text->font("Source Code Pro 16");
 	}
 	
 	void handle_mouse_event(const x11::mouse_event_t& mouse_event)
