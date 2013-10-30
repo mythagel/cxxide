@@ -184,7 +184,7 @@ struct button : component
 		});
 		
 		text = context->make_layout();
-		text->font("Source Code Pro 16");
+		text->font("Source Code Pro  16");
 	}
 	
 	void handle_mouse_event(const x11::mouse_event_t& mouse_event)
@@ -310,15 +310,76 @@ struct button : component
 	}
 };
 
+struct treeitem : component
+{
+    std::shared_ptr<pango::layout_t> label;
+    bool expanded;
+
+	treeitem(x11::window_t& parent, const std::string& label)
+	 : component(parent, x11::rectangle_t<int>{0, 0, 1, 1}),
+       label(context->make_layout()),
+       expanded(false)
+	{
+		select_events(  ButtonPressMask | ButtonReleaseMask |
+					EnterWindowMask | LeaveWindowMask |
+					StructureNotifyMask | ExposureMask);
+		this->label->font("Source Code Pro  16");
+		this->label->text(label);
+	}
+	
+    virtual void _draw(cairo_t* cr) override
+    {
+        using namespace cairo::drawing;
+
+        int width;
+        int height;
+        label->size(&width, &height);
+        
+        move_resize({x, y, x+width, y+height});
+    
+        draw_state state;
+        if(expanded)
+        {
+            auto draw_fn = cairo::make_stack(
+                colour(0, 0, 0, 1.0, state),
+                paint(state),
+                colour(1, 1, 1, 1.0, state),
+                rectangle(0.5, 0.5, width-1, height-1, state),
+                stroke(false, state),
+                pango_layout(label, state)
+                );
+            
+            draw_fn(cr);
+        }
+        else
+        {
+            auto draw_fn = cairo::make_stack(
+                colour(0, 0, 0, 1.0, state),
+                paint(state),
+                colour(1, 1, 1, 1.0, state),
+                rectangle(0.5, 0.5, width-1, height-1, state),
+                stroke(false, state),
+                pango_layout(label, state)
+                );
+            
+            draw_fn(cr);
+        }
+    }
+};
+
 class main_window : public cairo::cairo_window_t
 {
     button b;
+    treeitem ti;
 public:
 	main_window(x11::display_t& display)
 	 : cairo_window_t(display, x11::rectangle_t<int>{0, 0, 1024, 576}),
-	   b(*this)
+	   b(*this), ti(*this, "lib_source")
 	{
 	    b.map();
+	    
+	    ti.move_resize({100, 100, 100+100, 100+100});
+	    ti.map();
 	}
 
 	virtual void on_key_event(const x11::key_event_t& key_event) override
