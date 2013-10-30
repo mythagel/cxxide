@@ -13,7 +13,7 @@
 #include <string>
 #include "context.h"
 
-namespace ui
+namespace cxxide
 {
 namespace pango
 {

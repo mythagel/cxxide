@@ -25,7 +25,7 @@ void intrusive_ptr_release(PangoLayout* layout)
 //	pango_attr_list_unref (list);
 //}
 
-namespace ui
+namespace cxxide
 {
 namespace pango
 {
@@ -54,7 +54,7 @@ void layout_t::text(const std::string& text)
 
 void layout_t::size(int* width, int* height)
 {
-	pango_layout_get_size(layout.get(), width, height);
+	pango_layout_get_pixel_size(layout.get(), width, height);
 }
 
 void layout_t::draw(cairo_t* cr)

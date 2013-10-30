@@ -18,7 +18,7 @@ void intrusive_ptr_release(PangoContext* context)
 	g_object_unref(context);
 }
 
-namespace ui
+namespace cxxide
 {
 namespace pango
 {

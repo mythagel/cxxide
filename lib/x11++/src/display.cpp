@@ -247,6 +247,8 @@ void display_t::run_display_event_loop()
 
 				window_event_t window_event;
 				window_event.type = window_event_t::Resize;
+				window_event.size.x = xconfigure.x;
+				window_event.size.y = xconfigure.y;
 				window_event.size.width = xconfigure.width;
 				window_event.size.height = xconfigure.height;
 

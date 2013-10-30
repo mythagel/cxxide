@@ -55,10 +55,10 @@ void cairo_window_t::draw()
 	}
 }
 
-void cairo_window_t::on_key_event(const x11::key_event_t& key_event)
+void cairo_window_t::on_key_event(const x11::key_event_t&)
 {
 }
-void cairo_window_t::on_mouse_event(const x11::mouse_event_t& mouse_event)
+void cairo_window_t::on_mouse_event(const x11::mouse_event_t&)
 {
 }
 void cairo_window_t::on_window_event(const x11::window_event_t& window_event)
@@ -76,10 +76,8 @@ void cairo_window_t::on_window_event(const x11::window_event_t& window_event)
 		case window_event_t::Focus_Out:
 			break;
 		case window_event_t::Resize:
-		{
 			cairo_xlib_surface_set_size(cs, window_event.size.width, window_event.size.height);
 			break;
-		}
 		case window_event_t::Close:
 			break;
 	}

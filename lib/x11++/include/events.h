@@ -70,6 +70,8 @@ struct window_event_t
 	} type = Enter;
 	struct
 	{
+	    int x;
+	    int y;
 		int width = 0;
 		int height = 0;
 	} size;

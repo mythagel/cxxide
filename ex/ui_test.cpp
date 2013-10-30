@@ -12,6 +12,9 @@
 #include "drawstate.h"
 #include "stack.h"
 #include "scopedcontext.h"
+#include "context.h"
+#include "layout.h"
+#include "signal.h"
 
 using namespace cxxide;
 
@@ -27,29 +30,70 @@ window registers with its own callbacks for what is needed.
 no value types - shared_ptr and non-copyable.
 */
 
-struct component : cairo::cairo_window_t
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args)
 {
-    component(x11::window_t& parent, const x11::rectangle_t<int>& rect)
-     : cairo_window_t(parent, rect)
-    {
-    }
-};
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
-struct extents_t
+class component : public cairo::cairo_window_t
 {
+protected:
+    std::unique_ptr<pango::context_t> context;
+    int x;
+    int y;
     int width;
     int height;
-};
-extents_t text_extents(cairo_t* cr, const std::string& utf8, const std::string& family, cairo_font_slant_t slant, cairo_font_weight_t weight, double size)
-{
-    cairo::scoped_context guard(cr);
-    cairo_select_font_face (cr, family.c_str(), slant, weight);
-    cairo_set_font_size (cr, size);
-    cairo_text_extents_t extents;
-    cairo_text_extents(cr, utf8.c_str(), &extents);
+public:
+    component(x11::window_t& parent, const x11::rectangle_t<int>& rect)
+     : cairo_window_t(parent, rect), context(make_unique<pango::context_t>(cr)),
+       x(rect.min.x), y(rect.min.y), width(rect.width()), height(rect.height())
+    {
+    }
     
-    return {extents.width, extents.height};
-}
+    cxxide::signal<x11::key_event_t> key_event;
+    cxxide::signal<x11::mouse_event_t> mouse_event;
+    cxxide::signal<x11::window_event_t> window_event;
+
+    virtual void on_key_event(const x11::key_event_t& key_event) final
+    {
+        cairo_window_t::on_key_event(key_event);
+        this->key_event(key_event);
+    }
+    virtual void on_mouse_event(const x11::mouse_event_t& mouse_event) final
+    {
+        cairo_window_t::on_mouse_event(mouse_event);
+        this->mouse_event(mouse_event);
+    }
+    virtual void on_window_event(const x11::window_event_t& window_event) final
+    {
+    	cairo_window_t::on_window_event(window_event);
+
+	    using namespace x11;
+	    switch(window_event.type)
+	    {
+		    case window_event_t::Enter:
+			    break;
+		    case window_event_t::Leave:
+			    break;
+		    case window_event_t::Focus_In:
+			    break;
+		    case window_event_t::Focus_Out:
+			    break;
+		    case window_event_t::Resize:
+			    context->update(cr);
+			    x = window_event.size.x;
+			    y = window_event.size.y;
+			    width = window_event.size.width;
+			    height = window_event.size.height;
+			    break;
+		    case window_event_t::Close:
+			    break;
+	    }
+	    
+	    this->window_event(window_event);
+    }
+};
 
 /* Widgets needed
 
@@ -106,6 +150,11 @@ needs to measure and layout child components (windows)
 
 */
 
+cairo::drawfn_t pango_layout(std::shared_ptr<pango::layout_t> layout, cairo::drawing::draw_state&)
+{
+    return [layout](cairo_t* cr) { layout->draw(cr); };
+}
+
 struct button : component
 {
     enum {
@@ -115,6 +164,8 @@ struct button : component
         down
     } bstate;
     
+    std::shared_ptr<pango::layout_t> text;
+    
 	button(x11::window_t& parent)
 	 : component(parent, x11::rectangle_t<int>{50, 50, 50+200, 50+50}),
 	   bstate(active)
@@ -122,9 +173,21 @@ struct button : component
 		select_events(  ButtonPressMask | ButtonReleaseMask |
 						EnterWindowMask | LeaveWindowMask |
 						StructureNotifyMask | ExposureMask);
+		
+		mouse_event.connect([this](const x11::mouse_event_t& e)
+		{
+		    handle_mouse_event(e);
+		});
+		window_event.connect([this](const x11::window_event_t& e)
+		{
+		    handle_window_event(e);
+		});
+		
+		text = context->make_layout();
+		text->font("Sans 16");
 	}
 	
-	virtual void on_mouse_event(const x11::mouse_event_t& mouse_event) override
+	void handle_mouse_event(const x11::mouse_event_t& mouse_event)
 	{
 		//window_t::on_mouse_event(mouse_event);
 
@@ -144,11 +207,14 @@ struct button : component
     {
         using namespace cairo::drawing;
         
-        auto size = text_extents(cr, "build", "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32);
+        text->text("build");
         
-        fprintf(stderr, "%d, %d\n", size.width, size.height);
+        int width;
+        int height;
+        text->size(&width, &height);
         
-        move_resize({50, 50, 50+size.width+20, 50+size.height+20});
+        fprintf(stderr, "%d, %d\n", width, height);
+        move_resize({50, 50, 50+width+20, 50+height+20});
         
         draw_state state;
         
@@ -165,11 +231,10 @@ struct button : component
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
                     colour(0.3, 0.3, 0.3, 1.0, state),
-                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
+                    rectangle(0.5, 0.5, width+19, height+19, state),
                     stroke(false, state),
-                    move_to(10, 10+size.height, state),
-                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
-                    text("build", false, state)
+                    move_to(10, 10, state),
+                    pango_layout(text, state)
                     );
                 
                 draw_fn(cr);
@@ -182,11 +247,10 @@ struct button : component
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
                     colour(0.7, 0.7, 0.7, 1.0, state),
-                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
+                    rectangle(0.5, 0.5, width+19, height+19, state),
                     stroke(false, state),
-                    move_to(10, 10+size.height, state),
-                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
-                    text("build", false, state)
+                    move_to(10, 10, state),
+                    pango_layout(text, state)
                     );
                 
                 draw_fn(cr);
@@ -199,12 +263,11 @@ struct button : component
                     paint(state),
                     line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
                     colour(0.03, 0.15, 1, 1.0, state),
-                    rectangle(0.5, 0.5, size.width+19, size.height+19, state),
+                    rectangle(0.5, 0.5, width+19, height+19, state),
                     stroke(false, state),
-                    move_to(10, 10+size.height, state),
+                    move_to(10, 10, state),
                     colour(1, 1, 1, 1.0, state),
-                    font("sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL, 32, state),
-                    text("build", false, state)
+                    pango_layout(text, state)
                     );
                 
                 draw_fn(cr);
@@ -217,7 +280,7 @@ struct button : component
         }
     }
     
-	virtual void on_window_event(const x11::window_event_t& window_event) override
+	void handle_window_event(const x11::window_event_t& window_event)
 	{
 		//window_t::on_window_event(window_event);
 
@@ -280,19 +343,6 @@ public:
     virtual void _draw(cairo_t* cr) override
     {
         using namespace cairo::drawing;
-        
-        draw_state state;
-        auto draw_fn = cairo::make_stack(
-            colour(1, 1, 1, 1.0, state),
-            line(CAIRO_LINE_CAP_SQUARE, CAIRO_LINE_JOIN_MITER, 1, state),
-            move_to(100, 100, state),
-            line_to(100, 120, state),
-            line_to(115, 110, state),
-            line_to(100, 100, state),
-            fill(false, state)
-            );
-        
-        draw_fn(cr);
     }
 	
 	virtual void on_mouse_event(const x11::mouse_event_t& mouse_event) override
