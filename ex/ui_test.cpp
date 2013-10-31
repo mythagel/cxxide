@@ -118,7 +118,7 @@ checkbox (select between options not for on/off stuff)
 cmake editor
 maybe an active text box
 i.e. type in text gets split by spaces into individual items
-each tiem has a small x to remove it. could click to reorder.
+each item has a small x to remove it. could click to reorder.
 
 future (not currently used)
 value spinner (+/- to increment value)
@@ -126,6 +126,9 @@ value spinner (+/- to increment value)
 */
 
 /*
+
+s/xlib/xcb/
+s/pango/harfbuzz+icu/
 
 x11 display has to distribute events to existing windows
     knows about all created windows
@@ -310,59 +313,66 @@ struct button : component
 	}
 };
 
-struct treeitem : component
+struct treeitem
 {
-    std::shared_ptr<pango::layout_t> label;
+    std::string label;
+    bool expanded = true;
+    std::vector<treeitem> children;
+    
+    explicit treeitem(const std::string& label)
+     : label(label)
+    {
+    }
+};
+
+struct treeview : component
+{
+    std::vector<treeitem> children;
     bool expanded;
 
-	treeitem(x11::window_t& parent, const std::string& label)
+	treeview(x11::window_t& parent)
 	 : component(parent, x11::rectangle_t<int>{0, 0, 1, 1}),
-       label(context->make_layout()),
        expanded(false)
 	{
 		select_events(  ButtonPressMask | ButtonReleaseMask |
 					EnterWindowMask | LeaveWindowMask |
 					StructureNotifyMask | ExposureMask);
-		this->label->font("Source Code Pro  16");
-		this->label->text(label);
+		context->font("Source Code Pro  10");
+	}
+	
+	void _draw(cairo_t* cr, const treeitem& ti, int x, int y)
+	{
+	    auto label = context->make_layout();
+	    label->text(ti.label);
+	    {
+            cairo::scoped_context guard(cr);
+	        cairo_translate(cr, x, y);
+	        label->draw(cr);
+	    }
+	    
+        int width;
+        int height;
+        label->size(&width, &height);
+	    
+	    if(ti.expanded && !ti.children.empty())
+	    {
+	        for(auto& i : ti.children)
+	            _draw(cr, i, x+10, y+height);
+	    }
 	}
 	
     virtual void _draw(cairo_t* cr) override
     {
         using namespace cairo::drawing;
 
-        int width;
-        int height;
-        label->size(&width, &height);
+        cairo::scoped_context guard(cr);
+        cairo_set_source_rgba(cr, 0, 0, 0, 1);
+        cairo_paint(cr);
+        cairo_set_source_rgba(cr, 1, 1, 1, 1);
         
-        move_resize({x, y, x+width, y+height});
-    
-        draw_state state;
-        if(expanded)
+        for(auto& ti : children)
         {
-            auto draw_fn = cairo::make_stack(
-                colour(0, 0, 0, 1.0, state),
-                paint(state),
-                colour(1, 1, 1, 1.0, state),
-                rectangle(0.5, 0.5, width-1, height-1, state),
-                stroke(false, state),
-                pango_layout(label, state)
-                );
-            
-            draw_fn(cr);
-        }
-        else
-        {
-            auto draw_fn = cairo::make_stack(
-                colour(0, 0, 0, 1.0, state),
-                paint(state),
-                colour(1, 1, 1, 1.0, state),
-                rectangle(0.5, 0.5, width-1, height-1, state),
-                stroke(false, state),
-                pango_layout(label, state)
-                );
-            
-            draw_fn(cr);
+            _draw(cr, ti, 0, 0);
         }
     }
 };
@@ -370,16 +380,30 @@ struct treeitem : component
 class main_window : public cairo::cairo_window_t
 {
     button b;
-    treeitem ti;
+    treeview tv;
 public:
 	main_window(x11::display_t& display)
 	 : cairo_window_t(display, x11::rectangle_t<int>{0, 0, 1024, 576}),
-	   b(*this), ti(*this, "lib_source")
+	   b(*this), tv(*this)
 	{
 	    b.map();
-	    
-	    ti.move_resize({100, 100, 100+100, 100+100});
-	    ti.map();
+	    tv.children.emplace_back("ex");
+	    tv.children.back().children.emplace_back("CMakeLists.txt");
+	    tv.children.back().children.emplace_back("ded.cpp");
+	    tv.children.back().children.emplace_back("hash_image.cpp");
+	    tv.children.back().children.emplace_back("libclang_basic.cpp");
+	    tv.children.back().children.emplace_back("README.md");
+	    tv.children.back().children.emplace_back("signal.h");
+	    tv.children.emplace_back("lib");
+	    tv.children.back().children.emplace_back("cairo++");
+	    tv.children.back().children.emplace_back("pango++");
+	    tv.children.back().children.emplace_back("template");
+	    tv.children.back().children.emplace_back("x11++");
+	    tv.children.back().children.emplace_back("CMakeLists.txt");
+	    tv.children.emplace_back("src");
+	    tv.children.emplace_back("test");
+	    tv.map();
+	    tv.move_resize({100, 100, 100+500, 100+500});
 	}
 
 	virtual void on_key_event(const x11::key_event_t& key_event) override
