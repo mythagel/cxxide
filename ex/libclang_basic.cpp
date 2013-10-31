@@ -330,7 +330,7 @@ struct cursor_set
     
     bool insert(const cursor& cur)
     {
-        return clang_CXCursorSet_insert(set, cur);
+        return clang_CXCursorSet_insert(set, cur.cur);
     }
     
     ~cursor_set()
