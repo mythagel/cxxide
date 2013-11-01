@@ -45,6 +45,10 @@ struct cursor;
 struct translation_unit;
 struct source_location;
 struct source_range;
+struct token_set;
+struct code_completion_string;
+struct code_complete_results;
+struct file;
 
 struct index
 {
@@ -71,7 +75,7 @@ struct translation_unit
     
     void reparse();
     
-    int code_complete(const std::string& filename, unsigned line, unsigned column);
+    code_complete_results codeCompleteAt(const std::string& filename, unsigned line, unsigned column);
     
     unsigned num_diagnostics();
     diagnostic get_diagnostic(unsigned idx);
@@ -93,13 +97,16 @@ struct translation_unit
     
     resource_usage get_usage();
     
+    token_set tokenize(source_range range);
+    
+    void visitInclusions(std::function<void(file, CXSourceLocation*, unsigned)> visitor);
+    
     ~translation_unit();
 };
 
 translation_unit create_translation_unit(index& idx, const std::string& filename, const std::vector<std::string>& args);
 translation_unit parse_translation_unit(index& idx, const std::vector<std::string>& args);
 
-// big deal - this is the main interface!
 struct cursor
 {
     CXCursor cur;
@@ -203,9 +210,73 @@ struct cursor
     CXCursorKind getTemplateKind();
     cursor getSpecializedTemplate();
     source_range getReferenceNameRange(unsigned NameFlags, unsigned PieceIndex);
+    code_completion_string completionString();
 };
 
-// TODO token == CXToken
+CXResult findReferencesInFile(cursor cur, file f, std::function<CXVisitorResult(cursor, source_range)> visitor);
+CXResult findIncludesInFile(translation_unit tu, file f, std::function<CXVisitorResult(cursor, source_range)> visitor);
+
+struct token
+{
+    CXToken tok;
+    CXTranslationUnit tu;
+    
+    CXTokenKind kind();
+    std::string spelling();
+    source_location location();
+    source_range extent();
+};
+
+struct token_set
+{
+    CXTranslationUnit tu;
+    CXToken *tokens;
+    unsigned size;
+    
+    token_set(CXTranslationUnit tu, CXToken *tokens, unsigned size);
+    token_set(token_set&& o);
+    token_set(const token_set&) = delete;
+    token_set& operator=(const token_set&) = delete;
+    
+    // annotate?
+    
+    ~token_set();
+};
+
+struct code_completion_string
+{
+    CXCompletionString str;
+    
+    CXCompletionChunkKind chunkKind(unsigned idx);
+    std::string chunkText(unsigned idx);
+    code_completion_string chunkCompletionString(unsigned idx);
+    unsigned chunks();
+    unsigned priority();
+    CXAvailabilityKind availability();
+    unsigned numAnnotations();
+    std::string annotation(unsigned idx);
+    std::string parent();
+    std::string briefComment();
+};
+
+struct code_complete_results
+{
+    CXCodeCompleteResults* results;
+    
+    code_complete_results(CXCodeCompleteResults* results);
+    code_complete_results(code_complete_results&& o);
+    code_complete_results(const code_complete_results&) = delete;
+    code_complete_results& operator=(const code_complete_results&) = delete;
+    
+    void sort();
+    unsigned numDiagnostics();
+    diagnostic getDiagnostic(unsigned idx);
+    unsigned long long contexts();
+    CXCursorKind containerKind(bool* IsIncomplete);
+    std::string containerUSR();
+    
+    ~code_complete_results();
+};
 
 struct cursor_set
 {

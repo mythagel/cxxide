@@ -116,24 +116,10 @@ void translation_unit::reparse()
     }
 }
 
-int translation_unit::code_complete(const std::string& filename, unsigned line, unsigned column)
+code_complete_results translation_unit::codeCompleteAt(const std::string& filename, unsigned line, unsigned column)
 {
     auto options = clang_defaultCodeCompleteOptions();
-    auto results = clang_codeCompleteAt(tu, filename.c_str(), line, column, nullptr, 0, options);
-    if (!results)
-        throw error("Unable to perform code completion!\n");
-
-    clang_sortCodeCompletionResults(results->Results, results->NumResults);
-
-    for(unsigned i = 0; i != results->NumResults; ++i)
-    {
-        auto completion_result = results->Results + i;
-        auto ks = string(clang_getCursorKindSpelling(completion_result->CursorKind)).str();
-        fprintf(stderr, "%s: \n", ks.c_str());
-    }
-    
-    clang_disposeCodeCompleteResults(results);
-    return 0;
+    return { clang_codeCompleteAt(tu, filename.c_str(), line, column, nullptr, 0, options) };
 }
 
 unsigned translation_unit::num_diagnostics()
@@ -179,6 +165,24 @@ translation_unit::resource_usage::~resource_usage()
 translation_unit::resource_usage translation_unit::get_usage()
 {
     return { clang_getCXTUResourceUsage(tu) };
+}
+
+token_set translation_unit::tokenize(source_range range)
+{
+    CXToken *tokens;
+    unsigned size;
+    clang_tokenize(tu, range.range, &tokens, &size);
+    
+    return { tu, tokens, size };
+}
+
+void translation_unit::visitInclusions(std::function<void(file, CXSourceLocation*, unsigned)> visitor)
+{
+    return clang_getInclusions(tu, [](CXFile included_file, CXSourceLocation* inclusion_stack, unsigned include_len, CXClientData client_data)
+    {
+        auto visitor = static_cast<std::function<void(file, CXSourceLocation*, unsigned)>*>(client_data);
+        return (*visitor)({ included_file }, inclusion_stack, include_len);
+    }, &visitor);
 }
 
 translation_unit::~translation_unit()
@@ -551,6 +555,151 @@ cursor cursor::getSpecializedTemplate()
 source_range cursor::getReferenceNameRange(unsigned NameFlags, unsigned PieceIndex)
 {
     return { clang_getCursorReferenceNameRange(cur, NameFlags, PieceIndex) };
+}
+code_completion_string cursor::completionString()
+{
+    return { clang_getCursorCompletionString(cur) };
+}
+
+CXResult findReferencesInFile(cursor cur, file f, std::function<CXVisitorResult(cursor, source_range)> visitor)
+{
+    CXCursorAndRangeVisitor v;
+    v.context = &visitor;
+    v.visit = [](void *context, CXCursor cur, CXSourceRange range) -> CXVisitorResult
+    {
+        auto visitor = static_cast<std::function<CXVisitorResult(cursor, source_range)>*>(context);
+        return (*visitor)( { cur }, { range } );
+    };
+    return clang_findReferencesInFile(cur.cur, f.file, v);
+}
+CXResult findIncludesInFile(translation_unit tu, file f, std::function<CXVisitorResult(cursor, source_range)> visitor)
+{
+    CXCursorAndRangeVisitor v;
+    v.context = &visitor;
+    v.visit = [](void *context, CXCursor cur, CXSourceRange range) -> CXVisitorResult
+    {
+        auto visitor = static_cast<std::function<CXVisitorResult(cursor, source_range)>*>(context);
+        return (*visitor)( { cur }, { range } );
+    };
+    return clang_findIncludesInFile(tu.tu, f.file, v);
+}
+
+CXTokenKind token::kind()
+{
+    return clang_getTokenKind(tok);
+}
+std::string token::spelling()
+{
+    return string(clang_getTokenSpelling(tu, tok)).str();
+}
+source_location token::location()
+{
+    return { clang_getTokenLocation(tu, tok) };
+}
+source_range token::extent()
+{
+    return { clang_getTokenExtent(tu, tok) };
+}
+
+token_set::token_set(CXTranslationUnit tu, CXToken *tokens, unsigned size)
+ : tu(tu), tokens(tokens), size(size)
+{
+}
+token_set::token_set(token_set&& o)
+ : tu(nullptr), tokens(nullptr), size(0)
+{
+    std::swap(tu, o.tu);
+    std::swap(tokens, o.tokens);
+    std::swap(size, o.size);
+}
+
+token_set::~token_set()
+{
+    if(tokens) clang_disposeTokens(tu, tokens, size);
+}
+
+CXCompletionChunkKind code_completion_string::chunkKind(unsigned idx)
+{
+    return clang_getCompletionChunkKind(str, idx);
+}
+std::string code_completion_string::chunkText(unsigned idx)
+{
+    return string(clang_getCompletionChunkText(str, idx)).str();
+}
+code_completion_string code_completion_string::chunkCompletionString(unsigned idx)
+{
+    return { clang_getCompletionChunkCompletionString(str, idx) };
+}
+unsigned code_completion_string::chunks()
+{
+    return clang_getNumCompletionChunks(str);
+}
+unsigned code_completion_string::priority()
+{
+    return clang_getCompletionPriority(str);
+}
+CXAvailabilityKind code_completion_string::availability()
+{
+    return clang_getCompletionAvailability(str);
+}
+unsigned code_completion_string::numAnnotations()
+{
+    return clang_getCompletionNumAnnotations(str);
+}
+std::string code_completion_string::annotation(unsigned idx)
+{
+    return string(clang_getCompletionAnnotation(str, idx)).str();
+}
+std::string code_completion_string::parent()
+{
+    return string(clang_getCompletionParent(str, nullptr)).str();
+}
+std::string code_completion_string::briefComment()
+{
+    return string(clang_getCompletionBriefComment(str)).str();
+}
+
+code_complete_results::code_complete_results(CXCodeCompleteResults* results)
+ : results(results)
+{
+}
+code_complete_results::code_complete_results(code_complete_results&& o)
+ : results(nullptr)
+{
+    std::swap(results, o.results);
+}
+
+void code_complete_results::sort()
+{
+    clang_sortCodeCompletionResults(results->Results, results->NumResults);
+}
+unsigned code_complete_results::numDiagnostics()
+{
+    return clang_codeCompleteGetNumDiagnostics(results);
+}
+diagnostic code_complete_results::getDiagnostic(unsigned idx)
+{
+    return { clang_codeCompleteGetDiagnostic(results, idx) };
+}
+unsigned long long code_complete_results::contexts()
+{
+    return clang_codeCompleteGetContexts(results);
+}
+CXCursorKind code_complete_results::containerKind(bool* IsIncomplete)
+{
+    unsigned incomplete;
+    auto kind = clang_codeCompleteGetContainerKind(results, &incomplete);
+    if(IsIncomplete) *IsIncomplete = incomplete;
+    return kind;
+}
+std::string code_complete_results::containerUSR()
+{
+    return string(clang_codeCompleteGetContainerUSR(results)).str();
+}
+
+code_complete_results::~code_complete_results()
+{
+    if(results) clang_disposeCodeCompleteResults(results);
 }
 
 cursor_set::cursor_set()
