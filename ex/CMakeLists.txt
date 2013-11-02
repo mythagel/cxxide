@@ -6,8 +6,9 @@ TARGET_LINK_LIBRARIES(xcbpp xcb)
 ADD_DEPENDENCIES(experiments xcbpp)
 
 
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib/clang++/include )
 ADD_EXECUTABLE(libclang_basic EXCLUDE_FROM_ALL libclang_basic.cpp)
-TARGET_LINK_LIBRARIES(libclang_basic clang)
+TARGET_LINK_LIBRARIES(libclang_basic clang++)
 ADD_DEPENDENCIES(experiments libclang_basic)
 
 FIND_PACKAGE(X11 REQUIRED)

@@ -84,10 +84,45 @@ index::index(index&& o)
 {
     std::swap(idx, o.idx);
 }
+
+translation_unit& index::create_translation_unit(const std::string& filename, const std::vector<std::string>& args)
+{
+    auto argv = convert_args(args);
+    auto tu = clang_createTranslationUnitFromSourceFile(idx, filename.c_str(), argv.size(), argv.data(), 0, nullptr);
+    if(!tu)
+        throw error("unable to parse tu");
+    
+    tus.emplace_back(tu);
+    return tus.back();
+}
+
+translation_unit& index::parse_translation_unit(const std::vector<std::string>& args)
+{
+    auto argv = convert_args(args);
+    unsigned options = CXTranslationUnit_DetailedPreprocessingRecord | 
+                        CXTranslationUnit_CacheCompletionResults;
+    
+    auto tu = clang_parseTranslationUnit(idx, nullptr, argv.data(), argv.size(), nullptr, 0, options);
+    if(!tu)
+        throw error("unable to parse tu");
+
+    // Have to reparse to cache completion results.
+    int err = clang_reparseTranslationUnit(tu, 0, 0, clang_defaultReparseOptions(tu));
+    if(err)
+    {
+        clang_disposeTranslationUnit(tu);
+        throw error("unable to reparse tu");
+    }
+    
+    tus.emplace_back(tu);
+    return tus.back();
+}
+
 index::~index()
 {
     /* The index must not be destroyed until all of the translation units created
      * within that index have been destroyed.*/
+    tus.clear();
     clang_disposeIndex(idx);
 }
 
@@ -188,36 +223,6 @@ void translation_unit::visitInclusions(std::function<void(file, CXSourceLocation
 translation_unit::~translation_unit()
 {
     if(tu) clang_disposeTranslationUnit(tu);
-}
-
-translation_unit create_translation_unit(index& idx, const std::string& filename, const std::vector<std::string>& args)
-{
-    auto argv = convert_args(args);
-    auto tu = clang_createTranslationUnitFromSourceFile(idx.idx, filename.c_str(), argv.size(), argv.data(), 0, nullptr);
-    if(!tu)
-        throw error("unable to parse tu");
-    return { tu };
-}
-
-translation_unit parse_translation_unit(index& idx, const std::vector<std::string>& args)
-{
-    auto argv = convert_args(args);
-    unsigned options = CXTranslationUnit_DetailedPreprocessingRecord | 
-                        CXTranslationUnit_CacheCompletionResults;
-    
-    auto tu = clang_parseTranslationUnit(idx.idx, nullptr, argv.data(), argv.size(), nullptr, 0, options);
-    if(!tu)
-        throw error("unable to parse tu");
-
-    // Have to reparse to cache completion results.
-    int err = clang_reparseTranslationUnit(tu, 0, 0, clang_defaultReparseOptions(tu));
-    if(err)
-    {
-        clang_disposeTranslationUnit(tu);
-        throw error("unable to reparse tu");
-    }
-
-    return { tu };
 }
 
 cursor cursor::null()
@@ -613,6 +618,29 @@ token_set::token_set(token_set&& o)
     std::swap(size, o.size);
 }
 
+token_set::iterator& token_set::iterator::operator++()
+{
+    ++index;
+    return *this;
+}
+token token_set::iterator::operator*()
+{
+    return { set.tokens[index], set.tu };
+}
+bool token_set::iterator::operator!=(const iterator& o) const
+{
+    return index != o.index;
+}
+
+token_set::iterator token_set::begin() const
+{
+    return { *this, 0 };
+}
+token_set::iterator token_set::end() const
+{
+    return { *this, size };
+}
+
 token_set::~token_set()
 {
     if(tokens) clang_disposeTokens(tu, tokens, size);
@@ -667,6 +695,15 @@ code_complete_results::code_complete_results(code_complete_results&& o)
  : results(nullptr)
 {
     std::swap(results, o.results);
+}
+
+unsigned code_complete_results::size() const
+{
+    return results->NumResults;
+}
+code_completion_string code_complete_results::operator[](unsigned idx)
+{
+    return { results->Results + idx };
 }
 
 void code_complete_results::sort()
@@ -918,13 +955,83 @@ diagnostic_set load_diagnositics(const std::string& filename)
     return { set };
 }
 
-compilation_db::commands::commands(compilation_db& db)
+std::string compilation_db::command::directory()
 {
-    cmds = clang_CompilationDatabase_getAllCompileCommands(db.db);
+    return string(clang_CompileCommand_getDirectory(cmd)).str();
+}
+unsigned compilation_db::command::size() const
+{
+    return clang_CompileCommand_getNumArgs(cmd);
+}
+std::string compilation_db::command::operator[](unsigned idx) const
+{
+    return string(clang_CompileCommand_getArg(cmd, idx)).str();
+}
+compilation_db::command::iterator& compilation_db::command::iterator::operator++()
+{
+    ++index;
+    return *this;
+}
+std::string compilation_db::command::iterator::operator*()
+{
+    return cmd[index];
+}
+bool compilation_db::command::iterator::operator!=(const iterator& o) const
+{
+    return index != o.index;
+}
+
+compilation_db::command::iterator compilation_db::command::begin() const
+{
+    return { *this, 0 };
+}
+compilation_db::command::iterator compilation_db::command::end() const
+{
+    return { *this, size() };
+}
+
+compilation_db::commands::commands(commands&& o)
+ : cmds(nullptr)
+{
+    std::swap(cmds, o.cmds);
+}
+compilation_db::commands::commands(CXCompileCommands cmds)
+ : cmds(cmds)
+{
+}
+unsigned compilation_db::commands::size() const
+{
+    return clang_CompileCommands_getSize(cmds);
+}
+compilation_db::command compilation_db::commands::operator[](unsigned idx) const
+{
+    return { clang_CompileCommands_getCommand(cmds, idx) };
+}
+compilation_db::commands::iterator& compilation_db::commands::iterator::operator++()
+{
+    ++index;
+    return *this;
+}
+compilation_db::command compilation_db::commands::iterator::operator*()
+{
+    return cmds[index];
+}
+bool compilation_db::commands::iterator::operator!=(const iterator& o) const
+{
+    return index != o.index;
+}
+
+compilation_db::commands::iterator compilation_db::commands::begin() const
+{
+    return { *this, 0 };
+}
+compilation_db::commands::iterator compilation_db::commands::end() const
+{
+    return { *this, size() };
 }
 compilation_db::commands::~commands()
 {
-    clang_CompileCommands_dispose(cmds);
+    if(cmds) clang_CompileCommands_dispose(cmds);
 }
 
 compilation_db::compilation_db(const std::string& build_path)
@@ -940,27 +1047,9 @@ compilation_db::compilation_db(const std::string& build_path)
     }
 }
 
-void compilation_db::index_db(index& idx)
+compilation_db::commands compilation_db::getAll()
 {
-    commands cmds(*this);
-    unsigned num_cmds = clang_CompileCommands_getSize(cmds.cmds);
-    
-    for (unsigned i = 0; i < num_cmds; ++i)
-    {
-        auto cmd = clang_CompileCommands_getCommand(cmds.cmds, i);
-        unsigned nargs = clang_CompileCommand_getNumArgs(cmd);
-        
-        std::vector<std::string> args;
-        for (unsigned i = 0; i < nargs; ++i)
-        {
-            string arg(clang_CompileCommand_getArg(cmd, i));
-            args.push_back(arg.c_str());
-        }
-        
-        auto tu = parse_translation_unit(idx, args);
-        
-        // null action?!
-    }
+    return { clang_CompilationDatabase_getAllCompileCommands(db) };
 }
 
 compilation_db::~compilation_db()

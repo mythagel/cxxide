@@ -53,12 +53,17 @@ struct file;
 struct index
 {
     CXIndex idx;
+    std::vector<translation_unit> tus;
 
     index(const index&) = delete;
     index& operator=(const index&) = delete;
     
     index();
     index(index&& o);
+    
+    translation_unit& create_translation_unit(const std::string& filename, const std::vector<std::string>& args);
+    translation_unit& parse_translation_unit(const std::vector<std::string>& args);
+    
     ~index();
 };
 
@@ -103,9 +108,6 @@ struct translation_unit
     
     ~translation_unit();
 };
-
-translation_unit create_translation_unit(index& idx, const std::string& filename, const std::vector<std::string>& args);
-translation_unit parse_translation_unit(index& idx, const std::vector<std::string>& args);
 
 struct cursor
 {
@@ -238,6 +240,19 @@ struct token_set
     token_set(const token_set&) = delete;
     token_set& operator=(const token_set&) = delete;
     
+    struct iterator
+    {
+        const token_set& set;
+        unsigned index;
+        
+        iterator& operator++();
+        token operator*();
+        bool operator!=(const iterator& o) const;
+    };
+    
+    iterator begin() const;
+    iterator end() const;
+    
     // annotate?
     
     ~token_set();
@@ -267,6 +282,9 @@ struct code_complete_results
     code_complete_results(code_complete_results&& o);
     code_complete_results(const code_complete_results&) = delete;
     code_complete_results& operator=(const code_complete_results&) = delete;
+    
+    unsigned size() const;
+    code_completion_string operator[](unsigned idx);
     
     void sort();
     unsigned numDiagnostics();
@@ -390,13 +408,52 @@ struct compilation_db
 {
     CXCompilationDatabase db;
     
+    struct command
+    {
+        CXCompileCommand cmd;
+        
+        std::string directory();
+        unsigned size() const;
+        std::string operator[](unsigned idx) const;
+
+        struct iterator
+        {
+            const command& cmd;
+            unsigned index;
+            
+            iterator& operator++();
+            std::string operator*();
+            bool operator!=(const iterator& o) const;
+        };
+        
+        iterator begin() const;
+        iterator end() const;
+    };
+    
     struct commands
     {
         CXCompileCommands cmds;
         
+        commands(commands&& o);
         commands(const commands&) = delete;
         commands& operator=(const commands&) = delete;
-        commands(compilation_db& db);
+        commands(CXCompileCommands cmds);
+        
+        unsigned size() const;
+        command operator[](unsigned idx) const;
+        
+        struct iterator
+        {
+            const commands& cmds;
+            unsigned index;
+            
+            iterator& operator++();
+            command operator*();
+            bool operator!=(const iterator& o) const;
+        };
+        
+        iterator begin() const;
+        iterator end() const;
         
         ~commands();
     };
@@ -405,7 +462,7 @@ struct compilation_db
     compilation_db& operator=(const compilation_db&) = delete;
     compilation_db(const std::string& build_path);
     
-    void index_db(index& idx);
+    commands getAll();
     
     ~compilation_db();
 };
