@@ -229,6 +229,8 @@ struct token
     source_range extent();
 };
 
+std::string to_string(CXTokenKind k);
+
 struct token_set
 {
     CXTranslationUnit tu;
@@ -273,6 +275,8 @@ struct code_completion_string
     std::string parent();
     std::string briefComment();
 };
+
+std::string to_string(CXCompletionChunkKind k);
 
 struct code_complete_results
 {

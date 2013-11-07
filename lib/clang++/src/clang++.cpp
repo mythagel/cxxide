@@ -53,12 +53,13 @@ struct string
 
     const char* c_str() const
     {
-        return clang_getCString(_str);
+        auto s = clang_getCString(_str);
+        return s ? s : "";
     }
 
     std::string str() const
     {
-        return clang_getCString(_str);
+        return c_str();
     }
 
     ~string()
@@ -606,6 +607,24 @@ source_range token::extent()
     return { clang_getTokenExtent(tu, tok) };
 }
 
+std::string to_string(CXTokenKind k)
+{
+    switch(k)
+    {
+        case CXToken_Punctuation:
+            return "punctuation";
+        case CXToken_Keyword:
+            return "keyword";
+        case CXToken_Identifier:
+            return "identifier";
+        case CXToken_Literal:
+            return "literal";
+        case CXToken_Comment:
+            return "comment";
+    }
+    return "Unknown";
+}
+
 token_set::token_set(CXTranslationUnit tu, CXToken *tokens, unsigned size)
  : tu(tu), tokens(tokens), size(size)
 {
@@ -685,6 +704,15 @@ std::string code_completion_string::parent()
 std::string code_completion_string::briefComment()
 {
     return string(clang_getCompletionBriefComment(str)).str();
+}
+
+std::string to_string(CXCompletionChunkKind k)
+{
+    switch(k)
+    {
+    
+    }
+    return "Unknown";
 }
 
 code_complete_results::code_complete_results(CXCodeCompleteResults* results)

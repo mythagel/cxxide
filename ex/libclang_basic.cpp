@@ -3,6 +3,22 @@
 
 // c-index-test best example of using libclang
 
+std::ostream& operator<<(std::ostream& os, clang::code_completion_string string)
+{
+    unsigned nchunks = string.chunks();
+    for (unsigned i = 0; i < nchunks; ++i)
+    {
+        auto kind = string.chunkKind(i);
+
+        if (kind == CXCompletionChunk_Optional)
+            os << "{Optional " << string.chunkCompletionString(i) << "}";
+        else if (kind == CXCompletionChunk_VerticalSpace)
+            os << "{VerticalSpace  }";
+        else
+            os << "{" << clang::to_string(kind) << " " << string.chunkText(i) << "}";
+    }
+}
+
 int main()
 {
     clang::index idx;
@@ -18,17 +34,20 @@ int main()
         std::cout << tu.spelling() << "\n";
         if(tu.spelling() == "/home/nicholas/dev/cxxide/src/project.cpp")
         {
-            auto res = tu.codeCompleteAt(tu.spelling(), 82, 25);
-            for(unsigned i = 0; i < res.size(); ++i)
+            auto results = tu.codeCompleteAt(tu.spelling(), 82, 25);
+            results.sort();
             {
-                auto opt = res[i];
-                for(unsigned i = 0; i < opt.chunks(); ++i)
+                for(unsigned i = 0; i < results.size(); ++i)
                 {
-                    //std::cout << opt.chunkText(i) << "  ";
+                    std::cout << results[i] << "\n";
                 }
-                //std::cout << "\n";
             }
-            // TODO
+            
+            auto toks = tu.tokenize(tu.get_cursor().extent());
+            for(auto tok : toks)
+            {
+                std::cout << tok.spelling() << " (" << clang::to_string(tok.kind()) << ")\n";
+            }
         }
         // null action?!
     }
