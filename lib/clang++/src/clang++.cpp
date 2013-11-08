@@ -341,6 +341,10 @@ bool cursor::type::operator==(const type& o)
 {
     return clang_equalTypes(ctype, o.ctype);
 }
+cursor::type::operator bool()
+{
+    return ctype.kind != CXType_Invalid;
+}
 cursor::type cursor::type::canonical()
 {
     return { clang_getCanonicalType(ctype) };
@@ -364,6 +368,11 @@ cursor::type cursor::type::pointee_type()
 cursor cursor::type::type_declaration()
 {
     return { clang_getTypeDeclaration(ctype) };
+}
+
+CXRefQualifierKind cursor::type::cxx_ref_qualifier()
+{
+    return clang_Type_getCXXRefQualifier(ctype);
 }
 
 std::string cursor::type::kind_spelling()

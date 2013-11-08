@@ -152,12 +152,14 @@ struct cursor
         
         std::string spelling();
         bool operator==(const type& o);
+        explicit operator bool();
         type canonical();
         bool const_qualified();
         bool volatile_qualified();
         bool restrict_qualified();
         type pointee_type();
         cursor type_declaration();
+        CXRefQualifierKind cxx_ref_qualifier();
         
         std::string kind_spelling();
         CXCallingConv function_calling_convention();
