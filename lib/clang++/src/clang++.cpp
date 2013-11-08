@@ -183,6 +183,16 @@ cursor translation_unit::get_cursor(const source_location& sl)
     return { clang_getCursor(tu, sl.loc) };
 }
 
+source_location translation_unit::get_location(file f, unsigned line, unsigned column)
+{
+    return { clang_getLocation(tu, f.file, line, column) };
+
+}
+file translation_unit::get_file(const std::string& filename)
+{
+    return { clang_getFile(tu, filename.c_str()) };
+}
+
 unsigned translation_unit::resource_usage::size()
 {
     return usage.numEntries;
@@ -309,9 +319,9 @@ cursor cursor::lexicalParent()
     return { clang_getCursorLexicalParent(cur) };
 }
 
-CXFile cursor::includedFile()
+file cursor::includedFile()
 {
-    return clang_getIncludedFile(cur);
+    return { clang_getIncludedFile(cur) };
 }
 
 source_location cursor::location()
@@ -475,11 +485,11 @@ cursor cursor::getOverloadedDecl(unsigned idx)
     return { clang_getOverloadedDecl(cur, idx) };
 }
 
-bool cursor::visitChildren(std::function<CXChildVisitResult(cursor cur, cursor parent)> visitor)
+bool cursor::visitChildren(std::function<CXChildVisitResult(const cursor& cur, const cursor& parent)> visitor)
 {
     return clang_visitChildren(cur, [](CXCursor cur, CXCursor parent, CXClientData client_data) -> CXChildVisitResult
     {
-        auto visitor = static_cast<std::function<CXChildVisitResult(cursor cur, cursor parent)>*>(client_data);
+        auto visitor = static_cast<std::function<CXChildVisitResult(const cursor& cur, const cursor& parent)>*>(client_data);
         return (*visitor)({ cur }, { parent });
     }, &visitor);
 }
@@ -567,6 +577,11 @@ code_completion_string cursor::completionString()
     return { clang_getCursorCompletionString(cur) };
 }
 
+std::string to_string(CXCursorKind k)
+{
+    return string(clang_getCursorKindSpelling(k)).str();
+}
+
 CXResult findReferencesInFile(cursor cur, file f, std::function<CXVisitorResult(cursor, source_range)> visitor)
 {
     CXCursorAndRangeVisitor v;
@@ -578,7 +593,7 @@ CXResult findReferencesInFile(cursor cur, file f, std::function<CXVisitorResult(
     };
     return clang_findReferencesInFile(cur.cur, f.file, v);
 }
-CXResult findIncludesInFile(translation_unit tu, file f, std::function<CXVisitorResult(cursor, source_range)> visitor)
+CXResult findIncludesInFile(const translation_unit& tu, const file& f, std::function<CXVisitorResult(cursor, source_range)> visitor)
 {
     CXCursorAndRangeVisitor v;
     v.context = &visitor;
@@ -838,11 +853,11 @@ bool source_location::operator==(const source_location& o) const
     return clang_equalLocations(loc, o.loc);
 }
 
-void source_location::expansion_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset)
+void source_location::expansion_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const
 {
     clang_getExpansionLocation(loc, file, line, column, offset);
 }
-void source_location::presumed_location(std::string *filename, unsigned *line, unsigned *column)
+void source_location::presumed_location(std::string *filename, unsigned *line, unsigned *column) const
 {
     if(filename)
     {
@@ -855,15 +870,11 @@ void source_location::presumed_location(std::string *filename, unsigned *line, u
         clang_getPresumedLocation(loc, nullptr, line, column);
     }
 }
-void source_location::instantiation_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset)
-{
-    clang_getInstantiationLocation(loc, file, line, column, offset);
-}
-void source_location::spelling_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset)
+void source_location::spelling_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const
 {
     clang_getSpellingLocation(loc, file, line, column, offset);
 }
-void source_location::file_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset)
+void source_location::file_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const
 {
     clang_getFileLocation(loc, file, line, column, offset);
 }

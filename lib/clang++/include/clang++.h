@@ -88,6 +88,8 @@ struct translation_unit
     
     cursor get_cursor();
     cursor get_cursor(const source_location& sl);
+    source_location get_location(file f, unsigned line, unsigned column);
+    file get_file(const std::string& filename);
     
     struct resource_usage
     {
@@ -139,7 +141,7 @@ struct cursor
     cursor semanticParent() const;
     cursor lexicalParent();
     
-    CXFile includedFile();
+    file includedFile();
     
     source_location location();
     source_range extent();
@@ -189,7 +191,7 @@ struct cursor
     CX_CXXAccessSpecifier getCXXAccessSpecifier();
     unsigned numOverloadedDecls();
     cursor getOverloadedDecl(unsigned idx);
-    bool visitChildren(std::function<CXChildVisitResult(cursor cur, cursor parent)> visitor);
+    bool visitChildren(std::function<CXChildVisitResult(const cursor& cur, const cursor& parent)> visitor);
     
     std::string unified_symbol();
     std::string spelling();
@@ -215,8 +217,10 @@ struct cursor
     code_completion_string completionString();
 };
 
+std::string to_string(CXCursorKind k);
+
 CXResult findReferencesInFile(cursor cur, file f, std::function<CXVisitorResult(cursor, source_range)> visitor);
-CXResult findIncludesInFile(translation_unit tu, file f, std::function<CXVisitorResult(cursor, source_range)> visitor);
+CXResult findIncludesInFile(const translation_unit& tu, const file& f, std::function<CXVisitorResult(cursor, source_range)> visitor);
 
 struct token
 {
@@ -321,11 +325,10 @@ struct source_location
     
     bool operator==(const source_location& o) const;
     
-    void expansion_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset);
-    void presumed_location(std::string *filename, unsigned *line, unsigned *column);
-    void instantiation_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset);
-    void spelling_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset);
-    void file_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset);
+    void expansion_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const;
+    void presumed_location(std::string *filename, unsigned *line, unsigned *column) const;
+    void spelling_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const;
+    void file_location(CXFile *file, unsigned *line, unsigned *column, unsigned *offset) const;
 };
 
 struct source_range
