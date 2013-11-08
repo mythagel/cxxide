@@ -370,10 +370,10 @@ cursor cursor::type::type_declaration()
     return { clang_getTypeDeclaration(ctype) };
 }
 
-CXRefQualifierKind cursor::type::cxx_ref_qualifier()
-{
-    return clang_Type_getCXXRefQualifier(ctype);
-}
+//CXRefQualifierKind cursor::type::cxx_ref_qualifier()
+//{
+//    return clang_Type_getCXXRefQualifier(ctype);
+//}
 
 std::string cursor::type::kind_spelling()
 {
@@ -682,6 +682,21 @@ token_set::iterator token_set::begin() const
 token_set::iterator token_set::end() const
 {
     return { *this, size };
+}
+
+void token_set::annotate()
+{
+    std::vector<CXCursor> curs;
+    curs.resize(size);
+    clang_annotateTokens(tu, tokens, size, curs.data());
+    cursors.clear();
+    for(auto cur : curs)
+        cursors.push_back({ cur });
+}
+
+token token_set::operator[](unsigned idx) const
+{
+    return { tokens[idx], tu };
 }
 
 token_set::~token_set()

@@ -159,7 +159,7 @@ struct cursor
         bool restrict_qualified();
         type pointee_type();
         cursor type_declaration();
-        CXRefQualifierKind cxx_ref_qualifier();
+        //CXRefQualifierKind cxx_ref_qualifier();
         
         std::string kind_spelling();
         CXCallingConv function_calling_convention();
@@ -241,6 +241,7 @@ struct token_set
 {
     CXTranslationUnit tu;
     CXToken *tokens;
+    std::vector<cursor> cursors;
     unsigned size;
     
     token_set(CXTranslationUnit tu, CXToken *tokens, unsigned size);
@@ -261,7 +262,9 @@ struct token_set
     iterator begin() const;
     iterator end() const;
     
-    // annotate?
+    void annotate();
+    
+    token operator[](unsigned idx) const;
     
     ~token_set();
 };

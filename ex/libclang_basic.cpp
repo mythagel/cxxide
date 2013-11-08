@@ -1,5 +1,6 @@
 #include "clang++.h"
 #include <iostream>
+#include <algorithm>
 
 // c-index-test best example of using libclang
 
@@ -58,9 +59,19 @@ int main()
             }
             
             auto toks = tu.tokenize(tu.get_cursor().extent());
-            for(auto tok : toks)
+            toks.annotate();
+            for(unsigned i = 0; i < toks.size; ++i)
             {
-                std::cout << "tok: " << tok.spelling() << " (" << clang::to_string(tok.kind()) << ")\n";
+                auto tok = toks[i];
+                auto cur = toks.cursors[i];
+                std::cout << "tok: " << tok.spelling() << " (" << clang::to_string(tok.kind()) << ") cur: " << cur.location() << " " << clang::to_string(cur.kind()) << " " << cur.spelling() << "\n";
+            }
+            
+            {
+                auto cursors = toks.cursors;
+                cursors.erase(std::unique(cursors.begin(), cursors.end()), cursors.end());
+                for(auto& cur : cursors)
+                    std::cout << "cur: " << cur.location() << " " << clang::to_string(cur.kind()) << " " << cur.spelling() << "\n";
             }
             
             {
@@ -71,7 +82,7 @@ int main()
                 {
                     if(!cur.isUnexposed())
                     {
-                        std::cout << std::string(depth, '\t') << cur.location() << " " << clang::to_string(cur.kind()) << " " << cur.spelling() << "\n";
+                        std::cout << std::string(depth, ' ') << cur.location() << " " << clang::to_string(cur.kind()) << " " << cur.spelling() << "\n";
                     }
                     
                     ++depth;
