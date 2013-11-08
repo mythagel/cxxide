@@ -665,43 +665,43 @@ token_set::~token_set()
     if(tokens) clang_disposeTokens(tu, tokens, size);
 }
 
-CXCompletionChunkKind code_completion_string::chunkKind(unsigned idx)
+CXCompletionChunkKind code_completion_string::chunkKind(unsigned idx) const
 {
     return clang_getCompletionChunkKind(str, idx);
 }
-std::string code_completion_string::chunkText(unsigned idx)
+std::string code_completion_string::chunkText(unsigned idx) const
 {
     return string(clang_getCompletionChunkText(str, idx)).str();
 }
-code_completion_string code_completion_string::chunkCompletionString(unsigned idx)
+code_completion_string code_completion_string::chunkCompletionString(unsigned idx) const
 {
     return { clang_getCompletionChunkCompletionString(str, idx) };
 }
-unsigned code_completion_string::chunks()
+unsigned code_completion_string::chunks() const
 {
     return clang_getNumCompletionChunks(str);
 }
-unsigned code_completion_string::priority()
+unsigned code_completion_string::priority() const
 {
     return clang_getCompletionPriority(str);
 }
-CXAvailabilityKind code_completion_string::availability()
+CXAvailabilityKind code_completion_string::availability() const
 {
     return clang_getCompletionAvailability(str);
 }
-unsigned code_completion_string::numAnnotations()
+unsigned code_completion_string::numAnnotations() const
 {
     return clang_getCompletionNumAnnotations(str);
 }
-std::string code_completion_string::annotation(unsigned idx)
+std::string code_completion_string::annotation(unsigned idx) const
 {
     return string(clang_getCompletionAnnotation(str, idx)).str();
 }
-std::string code_completion_string::parent()
+std::string code_completion_string::parent() const
 {
     return string(clang_getCompletionParent(str, nullptr)).str();
 }
-std::string code_completion_string::briefComment()
+std::string code_completion_string::briefComment() const
 {
     return string(clang_getCompletionBriefComment(str)).str();
 }
@@ -710,7 +710,48 @@ std::string to_string(CXCompletionChunkKind k)
 {
     switch(k)
     {
-    
+        case CXCompletionChunk_Optional:
+            return "optional";
+        case CXCompletionChunk_TypedText:
+            return "typed text";
+        case CXCompletionChunk_Text:
+            return "text";
+        case CXCompletionChunk_Placeholder:
+            return "placeholder";
+        case CXCompletionChunk_Informative:
+            return "informative";
+        case CXCompletionChunk_CurrentParameter:
+            return "current parameter";
+        case CXCompletionChunk_LeftParen:
+            return "left paren";
+        case CXCompletionChunk_RightParen:
+            return "right paren";
+        case CXCompletionChunk_LeftBracket:
+            return "left bracket";
+        case CXCompletionChunk_RightBracket:
+            return "right bracket";
+        case CXCompletionChunk_LeftBrace:
+            return "left brace";
+        case CXCompletionChunk_RightBrace:
+            return "right brace";
+        case CXCompletionChunk_LeftAngle:
+            return "left angle";
+        case CXCompletionChunk_RightAngle:
+            return "right angle";
+        case CXCompletionChunk_Comma:
+            return "comma";
+        case CXCompletionChunk_ResultType:
+            return "result type";
+        case CXCompletionChunk_Colon:
+            return "colon";
+        case CXCompletionChunk_SemiColon:
+            return "semicolon";
+        case CXCompletionChunk_Equal:
+            return "equal";
+        case CXCompletionChunk_HorizontalSpace:
+            return "space";
+        case CXCompletionChunk_VerticalSpace:
+            return "vertical space";
     }
     return "Unknown";
 }
@@ -731,7 +772,7 @@ unsigned code_complete_results::size() const
 }
 code_completion_string code_complete_results::operator[](unsigned idx)
 {
-    return { results->Results + idx };
+    return { results->Results[idx].CompletionString };
 }
 
 void code_complete_results::sort()

@@ -264,16 +264,16 @@ struct code_completion_string
 {
     CXCompletionString str;
     
-    CXCompletionChunkKind chunkKind(unsigned idx);
-    std::string chunkText(unsigned idx);
-    code_completion_string chunkCompletionString(unsigned idx);
-    unsigned chunks();
-    unsigned priority();
-    CXAvailabilityKind availability();
-    unsigned numAnnotations();
-    std::string annotation(unsigned idx);
-    std::string parent();
-    std::string briefComment();
+    CXCompletionChunkKind chunkKind(unsigned idx) const;
+    std::string chunkText(unsigned idx) const;
+    code_completion_string chunkCompletionString(unsigned idx) const;
+    unsigned chunks() const;
+    unsigned priority() const;
+    CXAvailabilityKind availability() const;
+    unsigned numAnnotations() const;
+    std::string annotation(unsigned idx) const;
+    std::string parent() const;
+    std::string briefComment() const;
 };
 
 std::string to_string(CXCompletionChunkKind k);

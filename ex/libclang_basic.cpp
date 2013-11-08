@@ -3,7 +3,7 @@
 
 // c-index-test best example of using libclang
 
-std::ostream& operator<<(std::ostream& os, clang::code_completion_string string)
+std::ostream& operator<<(std::ostream& os, const clang::code_completion_string& string)
 {
     unsigned nchunks = string.chunks();
     for (unsigned i = 0; i < nchunks; ++i)
@@ -17,6 +17,7 @@ std::ostream& operator<<(std::ostream& os, clang::code_completion_string string)
         else
             os << "{" << clang::to_string(kind) << " " << string.chunkText(i) << "}";
     }
+    return os;
 }
 
 int main()
@@ -30,11 +31,12 @@ int main()
         std::vector<std::string> args;
         for(const auto& arg : cmd)
             args.push_back(arg);
+        args.push_back("-I/usr/include/clang/3.0/include/");
         auto& tu = idx.parse_translation_unit(args);
         std::cout << tu.spelling() << "\n";
-        if(tu.spelling() == "/home/nicholas/dev/cxxide/src/project.cpp")
+        if(tu.spelling() == "/home/nicholas/dev/cxxide/src/project.cpp" || tu.spelling() == "/home/nicholas/Development/cxxide/src/project.cpp")
         {
-            auto results = tu.codeCompleteAt(tu.spelling(), 82, 25);
+            auto results = tu.codeCompleteAt(tu.spelling(), 141, 35);
             results.sort();
             {
                 for(unsigned i = 0; i < results.size(); ++i)
