@@ -34,20 +34,8 @@ namespace source
 namespace license
 {
 
-/* Expanded license text
- * 
-*/
-struct text
-{
-    std::string name;
-    // The short text to add as a comment to every source header.
-    std::string header;
-    
-    // The full license text written as root/LICENSE
-    std::string full;
-};
-
-text generate(const std::string& name, const std::map<std::string, std::string>& vars);
+std::string generate_header(const std::string& name, const std::map<std::string, std::string>& vars);
+std::string generate_full(const std::string& name, const std::map<std::string, std::string>& vars);
 
 }
 }

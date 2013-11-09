@@ -6,7 +6,7 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  * 
- * This program is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,src/source/
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -32,9 +32,8 @@ namespace source
 namespace license
 {
 
-text generate(const std::string& name, const std::map<std::string, std::string>& vars)
+std::string generate_header(const std::string& name, const std::map<std::string, std::string>& vars)
 {
-    text generated;
     /* stat fs for license template.
      * fallback to these builtins.
      */
@@ -42,6 +41,20 @@ text generate(const std::string& name, const std::map<std::string, std::string>&
     {
         auto header = R"(Copyright (c) {{year}}, {{author}} All rights reserved.
 Distributed under the terms of the simplified BSD license. See LICENSE in the project root.)";
+        
+        return templ::expand(header, vars);
+    }
+    //...
+    return {};
+}
+
+std::string generate_full(const std::string& name, const std::map<std::string, std::string>& vars)
+{
+    /* stat fs for license template.
+     * fallback to these builtins.
+     */
+    if(name == "Simplified BSD License")
+    {
         auto full = R"(Copyright (c) {{year}}, {{author}}
 All rights reserved.
 
@@ -53,11 +66,10 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.)";
         
-        generated.name = name;
-        generated.header = templ::expand(header, vars);
-        generated.full = templ::expand(full, vars);
+        return templ::expand(full, vars);
     }
-    return generated;
+    //...
+    return {};
 }
 
 }
