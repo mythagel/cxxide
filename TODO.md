@@ -1,11 +1,18 @@
 TODO / Task List
 ================
 
+Code Tasks
+=========
+Rename project si-mu-ide i.e. microide
+project -> libidecore
+restructure to have central includes for idecore
+
+
 Move
  * src/{cmake,git,system}/ => lib/{cmake,git,system}
 Replace
  * lib/system with boost alternatives
- * boost fs is a linked lib - no worries
+ * boost is always a good dep.
 
 
 Git project init / open complete
@@ -14,9 +21,11 @@ Git project init / open complete
 Cmake project init / open complete
  * Can create an manage a logical project structure.
  * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
+ * All sections can be reordered at user option and still be managed.
 
 Need to implement source manager
  * Creates source file(s) from templates
+ * Manages licensing
 
 Should base project object have concept of license (i.e. project license)
  * could then automate license headers in files and include license text

@@ -8,6 +8,7 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib/template)
 ADD_SUBDIRECTORY(system)
 ADD_SUBDIRECTORY(git)
 ADD_SUBDIRECTORY(cmake)
+ADD_SUBDIRECTORY(source)
 
 ADD_LIBRARY(project STATIC project.cpp)
 TARGET_LINK_LIBRARIES(project git cmake template)

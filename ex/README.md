@@ -1,8 +1,3 @@
-basic xaw
-basic xft
-
-text display
-xft formatting (bold, underline, highlight, colours)
 
 vi basics (commands operating on buffer)
 
