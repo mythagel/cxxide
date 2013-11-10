@@ -39,8 +39,8 @@ std::string generate_header(const std::string& name, const std::map<std::string,
      */
     if(name == "Simplified BSD License")
     {
-        auto header = R"(Copyright (c) {{year}}, {{author}} All rights reserved.
-Distributed under the terms of the simplified BSD license. See LICENSE in the project root.)";
+        auto header = R"(Copyright (c) ${year}, ${author} All rights reserved.
+${project_name} is distributed under the terms of the Simplified BSD License. See the file LICENSE for details.)";
         
         return templ::expand(header, vars);
     }
@@ -55,7 +55,7 @@ std::string generate_full(const std::string& name, const std::map<std::string, s
      */
     if(name == "Simplified BSD License")
     {
-        auto full = R"(Copyright (c) {{year}}, {{author}}
+        auto full = R"(Copyright (c) ${year}, ${author}
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

@@ -6,13 +6,28 @@ Code Tasks
 Rename project si-mu-ide i.e. microide
 project -> libidecore
 restructure to have central includes for idecore
+build CLI versions of the cmake, source, & index libs
+ - git already has good cli interface
+ - cmake already has good cli interface
+ - will allow testing of the libs in a greater context.
 
+e.g.
+project create - create cmakelists.txt
+project package add blah
+project target init blah
+project target add source
+project target set cflags blah
+project source
+
+source create header blah [--lang c++/c]
+source create source blah [--lang c++/c]
+source create tu blah [--lang c++/c]
 
 Move
  * src/{cmake,git,system}/ => lib/{cmake,git,system}
 Replace
  * lib/system with boost alternatives
- * boost is always a good dep.
+    * boost is always a good dep.
 
 
 Git project init / open complete

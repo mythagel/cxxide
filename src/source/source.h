@@ -34,6 +34,9 @@ source
 tu (header + source)
 */
 
+/*
+to generate c++ source need a set of classes to generate code
 
+*/
 
 #endif /* SOURCE_H_ */
