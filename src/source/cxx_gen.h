@@ -49,6 +49,8 @@ struct comment_t
     std::string str() const;
 };
 
+std::string indent(const std::string& source, unsigned int spaces);
+
 }
 }
 }

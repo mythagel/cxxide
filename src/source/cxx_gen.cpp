@@ -42,9 +42,10 @@ std::string comment_t::str() const
     {
         case style_Block:
         {
+            os << "/";
             while (getline(is, line))
-            {
-            }
+                os << "* " << line << "\n ";
+            os << "*/";
             break;
         }
         case style_Line:
@@ -54,6 +55,19 @@ std::string comment_t::str() const
             break;
         }
     }
+    
+    return os.str();
+}
+
+std::string indent(const std::string& source, unsigned int spaces)
+{
+    auto indent = std::string(spaces, ' ');
+    std::ostringstream os;
+    std::istringstream is(source);
+    std::string line;
+    
+    while (getline(is, line))
+        os << indent << line << "\n";
     
     return os.str();
 }
