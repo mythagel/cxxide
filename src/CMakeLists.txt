@@ -10,9 +10,9 @@ ADD_SUBDIRECTORY(git)
 ADD_SUBDIRECTORY(cmake)
 ADD_SUBDIRECTORY(source)
 
-ADD_LIBRARY(project STATIC project.cpp)
-TARGET_LINK_LIBRARIES(project git cmake template)
+ADD_LIBRARY(idecore STATIC idecore.cpp)
+TARGET_LINK_LIBRARIES(idecore git cmake template)
 
 ADD_EXECUTABLE(project_test test.cpp)
-TARGET_LINK_LIBRARIES(project_test project)
+TARGET_LINK_LIBRARIES(project_test idecore)
 

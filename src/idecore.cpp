@@ -16,13 +16,13 @@
  */
 
 /*
- * project.cpp
+ * idecore.cpp
  *
  *  Created on: 2013-10-03
  *      Author: nicholas
  */
 
-#include "project.h"
+#include "idecore.h"
 #include <system_error>
 #include <stdexcept>
 #include <sys/types.h>

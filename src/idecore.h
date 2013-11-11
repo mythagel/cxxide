@@ -16,14 +16,14 @@
  */
 
 /*
- * project.h
+ * idecore.h
  *
  *  Created on: 2013-10-03
  *      Author: nicholas
  */
 
-#ifndef PROJECT_H_
-#define PROJECT_H_
+#ifndef IDECORE_H_
+#define IDECORE_H_
 #include <string>
 #include "git/git.h"
 #include "cmake/cmake.h"
@@ -80,4 +80,4 @@ project_t open(const std::string& path, const std::string& build_path);
 }
 }
 
-#endif /* PROJECT_H_ */
+#endif /* IDECORE_H_ */

@@ -4,7 +4,7 @@ TODO / Task List
 Code Tasks
 =========
 Rename project si-mu-ide i.e. microide
-project -> libidecore
+~~project -> libidecore~~
 restructure to have central includes for idecore
 build CLI versions of the cmake, source, & index libs
  - git already has good cli interface
@@ -12,8 +12,10 @@ build CLI versions of the cmake, source, & index libs
  - will allow testing of the libs in a greater context.
 
 e.g.
-project create - create cmakelists.txt
+project create blah - create cmakelists.txt
+project rename blah2
 project package add blah
+project package remove blah
 project target init blah
 project target add source
 project target set cflags blah
@@ -30,27 +32,25 @@ Replace
     * boost is always a good dep.
 
 
-Git project init / open complete
- * Other tasks can be implemented later as needed
+~~Git project init / open complete~~
+ * ~~Other tasks can be implemented later as needed~~
 
 Cmake project init / open complete
- * Can create an manage a logical project structure.
  * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
- * All sections can be reordered at user option and still be managed.
+ * ~~Can create an manage a logical project structure.~~
+ * ~~All sections can be reordered at user option and still be managed.~~
 
 Need to implement source manager
  * Creates source file(s) from templates
  * Manages licensing
 
-Should base project object have concept of license (i.e. project license)
- * could then automate license headers in files and include license text
+License generator
+ * ~~automates license headers in files and include license text~~
  * Need license list
- * ~/.cxxide/licences/MIT/LICENSE - license text
- * ~/.cxxide/licences/MIT/header - header text
- * header text is a short text summary of the license
- * the source manager will enclose the text in comments and inject at top of file.
+ * ~~header text is a short text summary of the license~~
+ * ~~the source manager will enclose the text in comments and inject at top of file.~~
 
-Cmake style variables, example from eclipse
+~~Cmake style variables, example from eclipse (implemented in libtemplate)~~
 
     ${project_name} ${project_summary}
     ${license}
@@ -66,9 +66,6 @@ Cmake style variables, example from eclipse
     #define ${include_guard}
     
     #endif
-
-Clang tasks do not exist
- * libclang all the way.
 
 cxxide functions and what is required from clang
 ================================================

@@ -32,6 +32,12 @@ namespace source
 namespace license
 {
 
+/*
+  Just... Fuck, what is wrong with me.
+  Fix this SHIT.
+  if necessary to includes licences - GENERATE the files.
+*/
+
 std::string generate_header(const std::string& name, const std::map<std::string, std::string>& vars)
 {
     /* TODO stat fs for license template.

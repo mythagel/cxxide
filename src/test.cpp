@@ -1,6 +1,6 @@
 #include <iostream>
 #include <exception>
-#include "project.h"
+#include "idecore.h"
 #include <string>
 #include <vector>
 #include <sys/stat.h>
