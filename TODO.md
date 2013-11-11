@@ -26,13 +26,9 @@ e.g.
     source create source blah [--lang c++/c]
     source create tu blah [--lang c++/c]
 
-Move
- * src/{cmake,git,system}/ => lib/{cmake,git,system}
-
 Replace
  * lib/system with boost alternatives
     * boost is always a good dep.
-
 
 ~~Git project init / open complete~~
  * ~~Other tasks can be implemented later as needed~~
