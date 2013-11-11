@@ -11,21 +11,6 @@ build CLI versions of the cmake, source, & index libs
  - cmake already has good cli interface
  - will allow testing of the libs in a greater context.
 
-e.g.
-
-    project create blah - create cmakelists.txt
-    project rename blah2
-    project package add blah
-    project package remove blah
-    project target init blah
-    project target add source
-    project target set cflags blah
-    project source
-    
-    source create header blah [--lang c++/c]
-    source create source blah [--lang c++/c]
-    source create tu blah [--lang c++/c]
-
 Replace
  * lib/system with boost alternatives
     * boost is always a good dep.
@@ -37,6 +22,7 @@ Cmake project init / open complete
  * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
  * ~~Can create an manage a logical project structure.~~
  * ~~All sections can be reordered at user option and still be managed.~~
+ * Make build path optional.
 
 Need to implement source manager
  * Creates source file(s) from templates
