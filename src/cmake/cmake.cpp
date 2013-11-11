@@ -24,20 +24,18 @@
 
 #include "cmake.h"
 #include <fstream>
-#include "exec.h"
 #include <vector>
 #include <exception>
 #include <iterator>
 #include "listparser.h"
 #include <unistd.h>
-#include <cstdio>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <system_error>
 #include "listwriter.h"
 #include "listreader.h"
 
-// Glibc defines these unneeded macros
+// Glibc defines these unwanted macros
 #undef major
 #undef minor
 
@@ -79,6 +77,9 @@ configuration_t::configuration_t()
  : managed(true)
 {
 }
+
+namespace
+{
 
 void rollback(const std::string& path, const directory_t& directory)
 {
@@ -151,6 +152,127 @@ void write_subdirectory(const std::string& path, const directory_t& directory)
     }
 }
 
+void read_subdirectory(const std::string& path, directory_t* directory)
+{
+    try
+    {
+        if(path.empty() || path == "/")
+            throw std::logic_error("root path in subdirectory!");
+    
+        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        if(!ifs)
+            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt");
+        
+        std::noskipws(ifs);
+        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+        
+        list_reader_t reader(nullptr, directory);
+        
+        auto c = source.c_str();
+        auto end = c + source.size();
+        
+        // Read CMakeLists.txt and fill config
+        reader.parse(c, end);
+        
+        // Recursively read subdirectory files.
+        for(auto& subdir : directory->subdirectories)
+            read_subdirectory(path + '/' + subdir.first, &subdir.second);
+        
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path + ") failed"));
+    }
+}
+
+void write_template(const std::string& name, const std::string& path)
+{
+    /* TODO paths are uglyified as a reminder to use a proper
+     * library for path components (i.e. boost) */
+    {
+        std::ofstream os(path + '/' + "CMakeLists.txt");
+        if(!os)
+            throw error("Unable to open CMakeLists.txt");
+        
+        os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
+        os << "PROJECT( " << name << " )\n";
+        os << "\n";
+        os << "##<< Managed Configuration >>##\n";
+        os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
+        os << "INCLUDE( idecore )\n";
+        os << "\n";
+        os << "##<< Referenced Packages >>##\n";
+        os << "##<< Referenced Packages >>##\n";
+        os << "\n";
+        os << "##<< Directory Properties >>##\n";
+        os << "##<< Directory Properties >>##\n";
+        os << "\n";
+        os << "##<< File Properties >>##\n";
+        os << "##<< File Properties >>##\n";
+        os << "\n";
+        os << "##<< Target Properties >>##\n";
+        os << "##<< Target Properties >>##\n";
+        os << "\n";
+    }
+    
+    {
+        int err;
+        err = mkdir((path + '/' + "cmake").c_str(), 0777);
+        if(err && err != EEXIST)
+            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + '/' + "cmake" + ")");
+        err = mkdir((path + '/' + "cmake" + '/' + "modules").c_str(), 0777);
+        if(err && err != EEXIST)
+            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + '/' + "cmake" + '/' + "modules" + ")");
+
+        // TODO raw string literal.
+        // TODO stat ~/idecore/idecore.cmake replacement
+        std::ofstream os(path + '/' + "cmake" + '/' + "modules" + '/' + "idecore.cmake");
+        os << "INCLUDE( CMakeParseArguments )\n";
+        os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
+        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
+        os << "    FOREACH(library IN LISTS arg_LIBS)\n";
+        os << "        FIND_LIBRARY(LIB ${library})\n";
+        os << "        LIST(APPEND LIBS ${LIB})\n";
+        os << "    ENDFOREACH()\n";
+        os << "    TARGET_LINK_LIBRARIES(${arg_TARGET} ${LIBS})\n";
+        os << "ENDFUNCTION()\n";
+        os << "\n";
+        os << "FUNCTION( SET_TARGET_PACKAGES )\n";
+        os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"PACKAGES\" ${ARGV})\n";
+        os << "    FOREACH(package IN LISTS arg_PACKAGES)\n";
+        os << "        STRING(TOUPPER \"${package}\" upper_package)\n";
+        os << "\n";        
+        os << "        IF(\"${package}_FOUND\")\n";
+        os << "            SET(PKG ${package})\n";
+        os << "        ELSEIF(\"${upper_package}_FOUND\")\n";
+        os << "            SET(PKG ${upper_package})\n";
+        os << "        ELSE()\n";
+        os << "            # Not actually an accurate message - more accurate is that it is not recognised.\n";
+        os << "            MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${arg_TARGET}' NOTFOUND\")\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${${PKG}_DEFINITIONS})\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIRS})\n";
+        os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
+        os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIR})\n";
+        os << "        ENDIF()\n";
+        os << "\n";        
+        os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARIES})\n";
+        os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
+        os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARY})\n";
+        os << "        ENDIF()\n";
+        os << "    ENDFOREACH()\n";
+        os << "ENDFUNCTION()\n";
+    }
+}
+
+}
+
 void write(const std::string& root_path, const configuration_t& config)
 {
     if(!config.managed)
@@ -160,7 +282,12 @@ void write(const std::string& root_path, const configuration_t& config)
     {
         std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
         if(!ifs)
-            throw error("Unable to open CMakeLists.txt");
+        {
+            write_template(config.name, root_path);
+            ifs.open(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+            if(!ifs)
+                throw error("Unable to open CMakeLists.txt after write.");
+        }
 
         std::noskipws(ifs);
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
@@ -205,39 +332,6 @@ void write(const std::string& root_path, const configuration_t& config)
     }
 }
 
-void read_subdirectory(const std::string& path, directory_t* directory)
-{
-    try
-    {
-        if(path.empty() || path == "/")
-            throw std::logic_error("root path in subdirectory!");
-    
-        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
-        if(!ifs)
-            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt");
-        
-        std::noskipws(ifs);
-        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-        
-        list_reader_t reader(nullptr, directory);
-        
-        auto c = source.c_str();
-        auto end = c + source.size();
-        
-        // Read CMakeLists.txt and fill config
-        reader.parse(c, end);
-        
-        // Recursively read subdirectory files.
-        for(auto& subdir : directory->subdirectories)
-            read_subdirectory(path + '/' + subdir.first, &subdir.second);
-        
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path + ") failed"));
-    }
-}
-
 configuration_t read(const std::string& root_path)
 {
     try
@@ -276,153 +370,6 @@ configuration_t read(const std::string& root_path)
     catch(...)
     {
         std::throw_with_nested(error("cmake::read failed"));
-    }
-}
-
-std::string project_t::name() const
-{
-    return configuration.name;
-}
-
-void project_t::generate()
-{
-    try
-    {
-        system::stream_t stream;
-        
-        auto args = std::vector<std::string>({"cmake", source_path, "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
-        
-        int err = system::exec(build_path, args, &stream);
-        if(err) throw error("cmake: " + stream.err);
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::generate failed"));
-    }
-}
-void project_t::build()
-{
-    try
-    {
-        system::stream_t stream;
-        
-        auto args = std::vector<std::string>({"cmake", "--build", build_path});
-        
-        int err = system::exec(build_path, args, &stream);
-        if(err) throw error("cmake: " + stream.err);
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::build failed"));
-    }
-}
-
-project_t create(const std::string& name, const std::string& source_path, const std::string& build_path)
-{
-    try
-    {
-        project_t project;
-        project.source_path = source_path;
-        project.build_path = build_path;
-
-        {
-            std::ofstream os(source_path + '/' + "CMakeLists.txt");
-            os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
-            os << "PROJECT( " << name << " )\n";
-            os << "\n";
-            os << "##<< Managed Configuration >>##\n";
-            os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
-            os << "INCLUDE( cxxide )\n";
-            os << "\n";
-            os << "##<< Referenced Packages >>##\n";
-            os << "##<< Referenced Packages >>##\n";
-            os << "\n";
-            os << "##<< Directory Properties >>##\n";
-            os << "##<< Directory Properties >>##\n";
-            os << "\n";
-            os << "##<< File Properties >>##\n";
-            os << "##<< File Properties >>##\n";
-            os << "\n";
-            os << "##<< Target Properties >>##\n";
-            os << "##<< Target Properties >>##\n";
-            os << "\n";
-        }
-
-        {
-            int err;
-            err = mkdir((source_path + '/' + "cmake").c_str(), 0777);
-            if(err)
-                throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + ")");
-            err = mkdir((source_path + '/' + "cmake" + '/' + "Modules").c_str(), 0777);
-            if(err)
-                throw std::system_error(errno, std::system_category(), std::string("mkdir(") + source_path + '/' + "cmake" + '/' + "Modules" + ")");
-
-            std::ofstream os(source_path + '/' + "cmake" + '/' + "Modules" + '/' + "cxxide.cmake");
-            os << "INCLUDE( CMakeParseArguments )\n";
-            os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
-            os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
-            os << "    FOREACH(library IN LISTS arg_LIBS)\n";
-            os << "        FIND_LIBRARY(LIB ${library})\n";
-            os << "        LIST(APPEND LIBS ${LIB})\n";
-            os << "    ENDFOREACH()\n";
-            os << "    TARGET_LINK_LIBRARIES(${arg_TARGET} ${LIBS})\n";
-            os << "ENDFUNCTION()\n";
-            os << "\n";
-            os << "FUNCTION( SET_TARGET_PACKAGES )\n";
-            os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"PACKAGES\" ${ARGV})\n";
-            os << "    FOREACH(package IN LISTS arg_PACKAGES)\n";
-            os << "        STRING(TOUPPER \"${package}\" upper_package)\n";
-            os << "\n";        
-            os << "        IF(\"${package}_FOUND\")\n";
-            os << "            SET(PKG ${package})\n";
-            os << "        ELSEIF(\"${upper_package}_FOUND\")\n";
-            os << "            SET(PKG ${upper_package})\n";
-            os << "        ELSE()\n";
-            os << "            # Not actually an accurate message - more accurate is that it is not recognised.\n";
-            os << "            MESSAGE(FATAL_ERROR \"Required package '${package}' in target '${arg_TARGET}' NOTFOUND\")\n";
-            os << "        ENDIF()\n";
-            os << "\n";        
-            os << "        IF(DEFINED \"${PKG}_DEFINITIONS\")\n";
-            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY COMPILE_DEFINITIONS ${${PKG}_DEFINITIONS})\n";
-            os << "        ENDIF()\n";
-            os << "\n";        
-            os << "        IF(DEFINED \"${PKG}_INCLUDE_DIRS\")\n";
-            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIRS})\n";
-            os << "        ELSEIF(DEFINED \"${PKG}_INCLUDE_DIR\")\n";
-            os << "            SET_PROPERTY(TARGET ${arg_TARGET} APPEND PROPERTY INCLUDE_DIRECTORIES ${${PKG}_INCLUDE_DIR})\n";
-            os << "        ENDIF()\n";
-            os << "\n";        
-            os << "        IF(DEFINED \"${PKG}_LIBRARIES\")\n";
-            os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARIES})\n";
-            os << "        ELSEIF(DEFINED \"${PKG}_LIBRARY\")\n";
-            os << "            TARGET_LINK_LIBRARIES(${arg_TARGET} ${${PKG}_LIBRARY})\n";
-            os << "        ENDIF()\n";
-            os << "    ENDFOREACH()\n";
-            os << "ENDFUNCTION()\n";
-        }
-
-        return project;
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::create failed"));
-    }
-}
-
-project_t open(const std::string& source_path, const std::string& build_path)
-{
-    try
-    {
-        project_t project;
-        project.source_path = source_path;
-        project.build_path = build_path;
-        project.configuration = cmake::read(project.source_path);
-        
-        return project;
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::open failed"));
     }
 }
 

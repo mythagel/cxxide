@@ -26,7 +26,7 @@
 #define IDECORE_H_
 #include <string>
 #include "git/git.h"
-#include "cmake/cmake.h"
+#include "cmake/cmake_project.h"
 #include <stdexcept>
 
 namespace cxxide
