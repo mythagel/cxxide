@@ -67,9 +67,9 @@ public:
     ~project_t();
 };
 
-project_t create(const std::string& name, const std::string& path, const std::string& build_path);
+project_t create(const std::string& name, const std::string& path, const std::string& build_path = {});
 
-project_t open(const std::string& path, const std::string& build_path);
+project_t open(const std::string& path, const std::string& build_path = {});
 
 ///*
 // git clone url into path

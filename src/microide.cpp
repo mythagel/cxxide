@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <boost/filesystem.hpp>
 
 using namespace cxxide;
+namespace fs = boost::filesystem;
 
 void print_exception(const std::exception& e, int level = 0)
 {
@@ -48,8 +50,9 @@ typedef void command_t(const std::vector<std::string>& args);
 
 void create(const std::vector<std::string>& args)
 {
+    auto path = fs::current_path();
     std::string name;
-//    auto project = project::create(const std::string& name, const std::string& path, const std::string& build_path);
+    //auto project = project::create(name, path);
 }
 
 void usage()
