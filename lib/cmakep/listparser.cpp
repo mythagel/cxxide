@@ -8,7 +8,6 @@
 #include "listparser.h"
 #include <cctype>
 
-
 namespace
 {
 void throw_if(bool cond, const std::string& what)

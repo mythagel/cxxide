@@ -12,21 +12,23 @@ build CLI versions of the cmake, source, & index libs
  - will allow testing of the libs in a greater context.
 
 e.g.
-project create blah - create cmakelists.txt
-project rename blah2
-project package add blah
-project package remove blah
-project target init blah
-project target add source
-project target set cflags blah
-project source
 
-source create header blah [--lang c++/c]
-source create source blah [--lang c++/c]
-source create tu blah [--lang c++/c]
+    project create blah - create cmakelists.txt
+    project rename blah2
+    project package add blah
+    project package remove blah
+    project target init blah
+    project target add source
+    project target set cflags blah
+    project source
+    
+    source create header blah [--lang c++/c]
+    source create source blah [--lang c++/c]
+    source create tu blah [--lang c++/c]
 
 Move
  * src/{cmake,git,system}/ => lib/{cmake,git,system}
+
 Replace
  * lib/system with boost alternatives
     * boost is always a good dep.
@@ -45,8 +47,8 @@ Need to implement source manager
  * Manages licensing
 
 License generator
- * ~~automates license headers in files and include license text~~
  * Need license list
+ * ~~automates license headers in files and include license text~~
  * ~~header text is a short text summary of the license~~
  * ~~the source manager will enclose the text in comments and inject at top of file.~~
 
