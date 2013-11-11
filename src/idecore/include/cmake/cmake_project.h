@@ -49,8 +49,8 @@ public:
     void build();
 };
 
-project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
-project_t open(const std::string& source_path, const std::string& build_path);
+project_t create(const std::string& name, const std::string& source_path, const std::string& build_path = {});
+project_t open(const std::string& source_path, const std::string& build_path = {});
 
 }
 }

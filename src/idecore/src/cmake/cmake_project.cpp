@@ -45,6 +45,9 @@ void project_t::generate()
 {
     try
     {
+        if(build_path.empty())
+            throw error("build path empty");
+        
         system::stream_t stream;
         
         auto args = std::vector<std::string>({"cmake", source_path, "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
@@ -61,6 +64,9 @@ void project_t::build()
 {
     try
     {
+        if(build_path.empty())
+            throw error("build path empty");
+        
         system::stream_t stream;
         
         auto args = std::vector<std::string>({"cmake", "--build", build_path});
