@@ -5,7 +5,7 @@ Code Tasks
 =========
 Rename project si-mu-ide i.e. microide
 ~~project -> libidecore~~
-restructure to have central includes for idecore
+~~restructure to have central includes for idecore~~
 build CLI versions of the cmake, source, & index libs
  - git already has good cli interface
  - cmake already has good cli interface

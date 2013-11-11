@@ -22,7 +22,7 @@
  *      Author: nicholas
  */
 
-#include "cmake.h"
+#include "cmake/cmake.h"
 #include <fstream>
 #include <vector>
 #include <exception>

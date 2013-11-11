@@ -23,7 +23,7 @@
  */
 
 #include "listwriter.h"
-#include "cmake.h"
+#include "cmake/cmake.h"
 #include <string>
 #include <ostream>
 #include <boost/algorithm/string/case_conv.hpp>

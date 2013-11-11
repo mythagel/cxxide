@@ -22,7 +22,7 @@
  *      Author: nicholas
  */
 
-#include "license.h"
+#include "source/license.h"
 #include "template.h"
 
 namespace cxxide

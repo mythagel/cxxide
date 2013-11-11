@@ -22,8 +22,8 @@
  *      Author: nicholas
  */
 
-#include "git.h"
-#include "exec.h"
+#include "git/git.h"
+#include "system/exec.h"
 #include <exception>
 
 namespace cxxide

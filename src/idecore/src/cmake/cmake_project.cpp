@@ -22,8 +22,8 @@
  *      Author: nicholas
  */
 
-#include "cmake_project.h"
-#include "exec.h"
+#include "cmake/cmake_project.h"
+#include "system/exec.h"
 #include <fstream>
 #include <unistd.h>
 #include <sys/stat.h>

@@ -23,7 +23,7 @@
  */
 
 #include "listreader.h"
-#include "cmake.h"
+#include "cmake/cmake.h"
 #include <boost/algorithm/string/case_conv.hpp>
 
 namespace cxxide
