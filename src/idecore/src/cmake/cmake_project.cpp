@@ -24,12 +24,8 @@
 
 #include "cmake/cmake_project.h"
 #include "system/exec.h"
-#include <fstream>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <system_error>
-#include <system_error>
+
+namespace fs = boost::filesystem;
 
 namespace cxxide
 {
@@ -48,11 +44,10 @@ void project_t::generate()
         if(build_path.empty())
             throw error("build path empty");
         
+        auto args = std::vector<std::string>({"cmake", source_path.native(), "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
+        
         system::stream_t stream;
-        
-        auto args = std::vector<std::string>({"cmake", source_path, "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
-        
-        int err = system::exec(build_path, args, &stream);
+        int err = system::exec(build_path.native(), args, &stream);
         if(err) throw error("cmake: " + stream.err);
     }
     catch(...)
@@ -67,11 +62,10 @@ void project_t::build()
         if(build_path.empty())
             throw error("build path empty");
         
+        auto args = std::vector<std::string>({"cmake", "--build", build_path.native()});
+        
         system::stream_t stream;
-        
-        auto args = std::vector<std::string>({"cmake", "--build", build_path});
-        
-        int err = system::exec(build_path, args, &stream);
+        int err = system::exec(build_path.native(), args, &stream);
         if(err) throw error("cmake: " + stream.err);
     }
     catch(...)
@@ -80,7 +74,7 @@ void project_t::build()
     }
 }
 
-project_t create(const std::string& name, const std::string& source_path, const std::string& build_path)
+project_t create(const std::string& name, const fs::path& source_path, const fs::path& build_path)
 {
     try
     {
@@ -99,7 +93,7 @@ project_t create(const std::string& name, const std::string& source_path, const 
     }
 }
 
-project_t open(const std::string& source_path, const std::string& build_path)
+project_t open(const fs::path& source_path, const fs::path& build_path)
 {
     try
     {

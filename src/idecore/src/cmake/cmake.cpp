@@ -23,21 +23,19 @@
  */
 
 #include "cmake/cmake.h"
-#include <fstream>
 #include <vector>
 #include <exception>
 #include <iterator>
 #include "listparser.h"
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <system_error>
 #include "listwriter.h"
 #include "listreader.h"
+#include <boost/filesystem/fstream.hpp>
 
 // Glibc defines these unwanted macros
 #undef major
 #undef minor
+
+namespace fs = boost::filesystem;
 
 namespace cxxide
 {
@@ -81,37 +79,30 @@ configuration_t::configuration_t()
 namespace
 {
 
-void rollback(const std::string& path, const directory_t& directory)
+void rollback(const fs::path& path, const directory_t& directory)
 {
-    int err = unlink((path + "/CMakeLists.txt.tmp").c_str());
-    if(err && errno != ENOENT)
-        throw std::system_error(errno, std::system_category(), std::string("unlink(") + path + "/CMakeLists.txt.tmp" + ")");
+    fs::remove(path / "CMakeLists.txt.tmp");
     
     for(auto& subdir : directory.subdirectories)
-        rollback(path + '/' + subdir.first, subdir.second);
+        rollback(path / subdir.first, subdir.second);
 }
 
-void commit(const std::string& path, const directory_t& directory)
+void commit(const fs::path& path, const directory_t& directory)
 {
-    int err = rename((path + "/CMakeLists.txt.tmp").c_str(), (path + "/CMakeLists.txt").c_str());
-    if(err)
-        throw std::system_error(errno, std::system_category(), std::string("rename(") + path + "/CMakeLists.txt.tmp" + ", " + path + "/CMakeLists.txt" + ")" );
+    fs::rename(path / "CMakeLists.txt.tmp", path / "CMakeLists.txt");
     
     for(auto& subdir : directory.subdirectories)
-        commit(path + '/' + subdir.first, subdir.second);
+        commit(path / subdir.first, subdir.second);
 }
 
-void write_subdirectory(const std::string& path, const directory_t& directory)
+void write_subdirectory(const fs::path& path, const directory_t& directory)
 {
     try
     {
-        if(path.empty() || path == "/")
-            throw std::logic_error("root path in subdirectory!");
-    
-        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
-        std::ofstream os(path + "/CMakeLists.txt.tmp");
+        fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
+        fs::ofstream os(path / "CMakeLists.txt.tmp");
         if(!os)
-            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt.tmp");
+            throw error(std::string("Unable to open ") + (path / "CMakeLists.txt.tmp").native());
         
         if(!ifs)
         {
@@ -143,25 +134,22 @@ void write_subdirectory(const std::string& path, const directory_t& directory)
         
         // Recursively write subdirectory files.
         for(auto& subdir : directory.subdirectories)
-            write_subdirectory(path + '/' + subdir.first, subdir.second);
+            write_subdirectory(path / subdir.first, subdir.second);
         
     }
     catch(...)
     {
-        std::throw_with_nested(error(std::string("cmake::write_subdirectory(") + path + ") failed"));
+        std::throw_with_nested(error(std::string("cmake::write_subdirectory(") + path.native() + ") failed"));
     }
 }
 
-void read_subdirectory(const std::string& path, directory_t* directory)
+void read_subdirectory(const fs::path& path, directory_t* directory)
 {
     try
     {
-        if(path.empty() || path == "/")
-            throw std::logic_error("root path in subdirectory!");
-    
-        std::ifstream ifs(path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
         if(!ifs)
-            throw error(std::string("Unable to open ") + path + "/CMakeLists.txt");
+            throw error(std::string("Unable to open ") + (path / "CMakeLists.txt").native());
         
         std::noskipws(ifs);
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
@@ -176,23 +164,21 @@ void read_subdirectory(const std::string& path, directory_t* directory)
         
         // Recursively read subdirectory files.
         for(auto& subdir : directory->subdirectories)
-            read_subdirectory(path + '/' + subdir.first, &subdir.second);
+            read_subdirectory(path / subdir.first, &subdir.second);
         
     }
     catch(...)
     {
-        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path + ") failed"));
+        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path.native() + ") failed"));
     }
 }
 
-void write_template(const std::string& name, const std::string& path)
+void write_template(const std::string& name, const fs::path& path)
 {
-    /* TODO paths are uglyified as a reminder to use a proper
-     * library for path components (i.e. boost) */
     {
-        std::ofstream os(path + '/' + "CMakeLists.txt");
+        fs::ofstream os(path / "CMakeLists.txt");
         if(!os)
-            throw error("Unable to open CMakeLists.txt");
+            throw error("Unable to write CMakeLists.txt");
         
         os << "CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )\n";
         os << "PROJECT( " << name << " )\n";
@@ -215,18 +201,16 @@ void write_template(const std::string& name, const std::string& path)
         os << "\n";
     }
     
+    if(!fs::exists(path / "cmake" / "modules" / "idecore.cmake"))
     {
-        int err;
-        err = mkdir((path + '/' + "cmake").c_str(), 0777);
-        if(err && err != EEXIST)
-            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + '/' + "cmake" + ")");
-        err = mkdir((path + '/' + "cmake" + '/' + "modules").c_str(), 0777);
-        if(err && err != EEXIST)
-            throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + '/' + "cmake" + '/' + "modules" + ")");
+        fs::create_directories(path / "cmake" / "modules");
 
         // TODO raw string literal.
         // TODO stat ~/idecore/idecore.cmake replacement
-        std::ofstream os(path + '/' + "cmake" + '/' + "modules" + '/' + "idecore.cmake");
+        fs::ofstream os(path / "cmake" / "modules" / "idecore.cmake");
+        if(!os)
+            throw error("Unable to write cmake/modules/idecore.cmake");
+        
         os << "INCLUDE( CMakeParseArguments )\n";
         os << "FUNCTION( SET_TARGET_LIBRARIES )\n";
         os << "    CMAKE_PARSE_ARGUMENTS( arg \"\" \"TARGET\" \"LIBS\" ${ARGV})\n";
@@ -273,18 +257,18 @@ void write_template(const std::string& name, const std::string& path)
 
 }
 
-void write(const std::string& root_path, const configuration_t& config)
+void write(const fs::path& root_path, const configuration_t& config)
 {
     if(!config.managed)
         throw error("Invalid attempt to write unmanaged configuration.");
     
     try
     {
-        std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        fs::ifstream ifs(root_path / "CMakeLists.txt", std::ios::in | std::ios::binary);
         if(!ifs)
         {
             write_template(config.name, root_path);
-            ifs.open(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+            ifs.open(root_path / "CMakeLists.txt", std::ios::in | std::ios::binary);
             if(!ifs)
                 throw error("Unable to open CMakeLists.txt after write.");
         }
@@ -292,9 +276,9 @@ void write(const std::string& root_path, const configuration_t& config)
         std::noskipws(ifs);
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
         
-        std::ofstream os(root_path + "/CMakeLists.txt.tmp");
+        fs::ofstream os(root_path / "CMakeLists.txt.tmp");
         if(!os)
-            throw error("Unable to open CMakeLists.txt.tmp");
+            throw error("Unable to write CMakeLists.txt.tmp");
         
         list_rewriter_t rewrite(os, &config, config.directory);
         
@@ -308,7 +292,7 @@ void write(const std::string& root_path, const configuration_t& config)
         {
             // Recursively write subdirectory files.
             for(auto& subdir : config.directory.subdirectories)
-                write_subdirectory(root_path + '/' + subdir.first, subdir.second);
+                write_subdirectory(root_path / subdir.first, subdir.second);
             
             // Rename CMakeLists.txt.tmp -> CMakeLists.txt recursively
             commit(root_path, config.directory);
@@ -332,15 +316,15 @@ void write(const std::string& root_path, const configuration_t& config)
     }
 }
 
-configuration_t read(const std::string& root_path)
+configuration_t read(const fs::path& root_path)
 {
     try
     {
         configuration_t config;
         
-        std::ifstream ifs(root_path + "/CMakeLists.txt", std::ios::in | std::ios::binary);
+        fs::ifstream ifs(root_path / "CMakeLists.txt", std::ios::in | std::ios::binary);
         if(!ifs)
-            throw error("Unable to open CMakeLists.txt");
+            throw error("Unable to read CMakeLists.txt");
 
         std::noskipws(ifs);
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
@@ -357,7 +341,7 @@ configuration_t read(const std::string& root_path)
         {
             // Recursively read subdirectory files.
             for(auto& subdir : config.directory.subdirectories)
-                read_subdirectory(root_path + '/' + subdir.first, &subdir.second);
+                read_subdirectory(root_path / subdir.first, &subdir.second);
             
             return config;
         }

@@ -28,6 +28,7 @@
 #include <vector>
 #include <set>
 #include <stdexcept>
+#include <boost/filesystem.hpp>
 
 namespace cxxide
 {
@@ -113,8 +114,8 @@ struct configuration_t
     configuration_t();
 };
 
-void write(const std::string& root_path, const configuration_t& config);
-configuration_t read(const std::string& root_path);
+void write(const boost::filesystem::path& root_path, const configuration_t& config);
+configuration_t read(const boost::filesystem::path& root_path);
 
 }
 }

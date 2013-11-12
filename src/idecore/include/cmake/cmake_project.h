@@ -26,6 +26,7 @@
 #define CMAKE_PROJECT_H_
 #include <string>
 #include "cmake.h"
+#include <boost/filesystem.hpp>
 
 namespace cxxide
 {
@@ -34,12 +35,12 @@ namespace cmake
 
 class project_t
 {
-friend project_t create(const std::string& name, const std::string& source_path, const std::string& build_path);
-friend project_t open(const std::string& source_path, const std::string& build_path);
+friend project_t create(const std::string& name, const boost::filesystem::path& source_path, const boost::filesystem::path& build_path);
+friend project_t open(const boost::filesystem::path& source_path, const boost::filesystem::path& build_path);
 
 private:
-    std::string source_path;
-    std::string build_path;
+    boost::filesystem::path source_path;
+    boost::filesystem::path build_path;
     
     configuration_t configuration;
 public:
@@ -49,8 +50,8 @@ public:
     void build();
 };
 
-project_t create(const std::string& name, const std::string& source_path, const std::string& build_path = {});
-project_t open(const std::string& source_path, const std::string& build_path = {});
+project_t create(const std::string& name, const boost::filesystem::path& source_path, const boost::filesystem::path& build_path = {});
+project_t open(const boost::filesystem::path& source_path, const boost::filesystem::path& build_path = {});
 
 }
 }
