@@ -39,6 +39,13 @@ struct stream_t
     std::string err;
 };
 
+/*
+TODO revisit required.
+It would be better to have a stream interface to a running process
+use a raii handle to represent the execution of the process.
+wait for process termination in dtor.
+*/
+
 int exec(const std::string& wd, const std::vector<std::string>& args);
 int exec(const std::string& wd, const std::vector<std::string>& args, stream_t* stream);
 
