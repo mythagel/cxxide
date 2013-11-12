@@ -49,18 +49,42 @@ source create tu blah [--lang c++/c]
 
 */
 
-typedef void command_t(const std::vector<std::string>& args);
+typedef void command_t(int argc, char* argv[]);
 
-void create(const std::vector<std::string>& args)
+void create(int argc, char* argv[])
 {
-    po::options_description desc("create options");
-    desc.add_options()
+    po::options_description generic("Allowed options");
+    generic.add_options()
         ("help", "produce help message")
         ("name", po::value<std::string>(), "project name")
-        ("path", po::value<std::string>(), "project path (default: cwd)")
+        ("path", po::value<std::string>()->default_value(fs::current_path().native()), "project path (default: cwd)")
     ;
 
-    auto path = fs::current_path();
+    po::options_description hidden("Hidden options");
+    hidden.add_options()
+        ("command", po::value<std::string>(), "Command to execute")
+    ;
+
+    po::options_description cmdline_options;
+    cmdline_options.add(generic).add(hidden);
+
+    po::options_description visible;
+    visible.add(generic);
+
+    po::positional_options_description p;
+    p.add("command", 1);
+
+    po::variables_map vm;
+    store(po::command_line_parser(argc, argv). positional(p).options(cmdline_options).run(), vm);
+    notify(vm);
+
+    if (vm.count("help"))
+    {
+        std::cout << visible << "\n";
+        return;
+    }
+
+    //auto path = ;
     std::string name;
     
     //auto project = project::create(name, path);
@@ -75,17 +99,13 @@ void usage()
 
 int main(int argc, char* argv[])
 {
-    std::vector<std::string> args(argv, argv + argc);
-    args.erase(args.begin());
-    
-    if(args.empty())
+    if(argc == 1)
     {
         usage();
         return 1;
     }
     
-    auto cmd = args[0];
-    args.erase(args.begin());
+    auto cmd = argv[1];
     
     std::map<std::string, command_t*> commands = 
     {
@@ -97,7 +117,7 @@ int main(int argc, char* argv[])
         auto command = commands.find(cmd);
         if(command != commands.end())
         {
-            command->second(args);
+            command->second(argc, argv);
             return 0;
         }
         else
