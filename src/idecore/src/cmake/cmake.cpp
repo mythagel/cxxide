@@ -201,7 +201,7 @@ void write_template(const std::string& name, const fs::path& path)
         os << "\n";
     }
     
-    if(!fs::exists(path / "cmake" / "modules" / "idecore.cmake"))
+    if(!exists(path / "cmake" / "modules" / "idecore.cmake"))
     {
         fs::create_directories(path / "cmake" / "modules");
 
