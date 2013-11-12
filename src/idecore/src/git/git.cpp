@@ -26,6 +26,8 @@
 #include "system/exec.h"
 #include <exception>
 
+namespace fs = boost::filesystem;
+
 namespace cxxide
 {
 namespace git
@@ -44,7 +46,7 @@ auto base_opts(std::initializer_list<std::string> opts) -> std::vector<std::stri
     return opts;
 }
 
-repo_t init(const std::string& path, const init_opts& opts)
+repo_t init(const fs::path& path, const init_opts& opts)
 {
     try
     {
@@ -59,7 +61,7 @@ repo_t init(const std::string& path, const init_opts& opts)
         add_if(opts.bare, {"--bare"});
         add_if(!opts.separate_git_dir.empty(), {"--separate-git-dir", opts.separate_git_dir});
         
-        int err = system::exec(path, args, &stream);
+        int err = system::exec(path.native(), args, &stream);
         if(err) throw error("git: " + stream.err);
         
         return { path, {} };
@@ -70,12 +72,12 @@ repo_t init(const std::string& path, const init_opts& opts)
     }
 }
 
-repo_t open(const std::string& path)
+repo_t open(const fs::path& path)
 {
     try
     {
         system::stream_t stream;
-        int err = system::exec(path, {"git", "rev-parse", "--show-toplevel"}, &stream);
+        int err = system::exec(path.native(), {"git", "rev-parse", "--show-toplevel"}, &stream);
         if(err) throw error("git: " + stream.err);
         
         return { stream.out, {} };

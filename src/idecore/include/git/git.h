@@ -36,6 +36,7 @@ cmake source_path -GNinja
 #define DVCSGIT_H_
 #include <string>
 #include <stdexcept>
+#include <boost/filesystem.hpp>
 
 namespace cxxide
 {
@@ -50,7 +51,7 @@ struct error : std::runtime_error
 
 struct repo_t
 {
-    std::string root;
+    boost::filesystem::path root;
 //    open();
 //    clone();
 //    
@@ -109,8 +110,8 @@ struct init_opts
     {
     }
 };
-repo_t init(const std::string& path, const init_opts& opts = {});
-repo_t open(const std::string& path);
+repo_t init(const boost::filesystem::path& path, const init_opts& opts = {});
+repo_t open(const boost::filesystem::path& path);
 
 
 //cat-file
