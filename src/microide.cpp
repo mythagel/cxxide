@@ -52,6 +52,7 @@ void create(const std::vector<std::string>& args)
 {
     auto path = fs::current_path();
     std::string name;
+    
     //auto project = project::create(name, path);
 }
 
