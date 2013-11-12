@@ -203,7 +203,7 @@ void write_template(const std::string& name, const fs::path& path)
     
     if(!exists(path / "cmake" / "modules" / "idecore.cmake"))
     {
-        fs::create_directories(path / "cmake" / "modules");
+        create_directories(path / "cmake" / "modules");
 
         // TODO raw string literal.
         // TODO stat ~/idecore/idecore.cmake replacement
