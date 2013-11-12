@@ -13,7 +13,8 @@ build CLI versions of the cmake, source, & index libs
 
 Replace
  * lib/system with boost alternatives
-    * boost is always a good dep.
+    * boost::process not approved.
+ * ~~boost::filesystem for paths~~
 
 ~~Git project init / open complete~~
  * ~~Other tasks can be implemented later as needed~~
@@ -22,7 +23,7 @@ Cmake project init / open complete
  * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
  * ~~Can create an manage a logical project structure.~~
  * ~~All sections can be reordered at user option and still be managed.~~
- * Make build path optional.
+ * ~~Make build path optional.~~
 
 Need to implement source manager
  * Creates source file(s) from templates
