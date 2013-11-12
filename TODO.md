@@ -4,39 +4,17 @@ TODO / Task List
 Code Tasks
 =========
 Rename project si-mu-ide i.e. microide
-~~project -> libidecore~~
-~~restructure to have central includes for idecore~~
 
 build CLI versions of the cmake, source, & index libs
- - git already has good cli interface
- - cmake already has good cli interface
  - will allow testing of the libs in a greater context.
-
-Replace
- * lib/system with boost alternatives
-    * boost::process not approved.
- * ~~boost::filesystem for paths~~
-
-~~Git project init / open complete~~
- * ~~Other tasks can be implemented later as needed~~
+ - can start to self host even without the gui.
 
 Cmake project init / open complete
  * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
- * ~~Can create an manage a logical project structure.~~
- * ~~All sections can be reordered at user option and still be managed.~~
- * ~~Make build path optional.~~
 
 Need to implement source manager
  * Creates source file(s) from templates
  * Manages licensing
-
-License generator
- * Need license list
- * ~~automates license headers in files and include license text~~
- * ~~header text is a short text summary of the license~~
- * ~~the source manager will enclose the text in comments and inject at top of file.~~
-
-~~Cmake style variables, example from eclipse (implemented in libtemplate)~~
 
     ${project_name} ${project_summary}
     ${license}
@@ -52,6 +30,9 @@ License generator
     #define ${include_guard}
     
     #endif
+
+License generator
+ * Need license list
 
 cxxide functions and what is required from clang
 ================================================

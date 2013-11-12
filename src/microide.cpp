@@ -5,9 +5,12 @@
 #include <vector>
 #include <map>
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 
 using namespace cxxide;
+
 namespace fs = boost::filesystem;
+namespace po = boost::program_options;
 
 void print_exception(const std::exception& e, int level = 0)
 {
@@ -50,6 +53,13 @@ typedef void command_t(const std::vector<std::string>& args);
 
 void create(const std::vector<std::string>& args)
 {
+    po::options_description desc("create options");
+    desc.add_options()
+        ("help", "produce help message")
+        ("name", po::value<std::string>(), "project name")
+        ("path", po::value<std::string>(), "project path (default: cwd)")
+    ;
+
     auto path = fs::current_path();
     std::string name;
     
