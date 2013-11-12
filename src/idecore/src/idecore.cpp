@@ -23,14 +23,10 @@
  */
 
 #include "idecore.h"
-#include <system_error>
-#include <stdexcept>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fstream>
-#include <cstdio>
 #include <exception>
+#include <boost/filesystem/fstream.hpp>
+
+namespace fs = boost::filesystem;
 
 namespace cxxide
 {
@@ -63,114 +59,70 @@ project_t::~project_t()
 {
 }
 
-struct create_directory_nx
+project_t create(const std::string& name, const fs::path& path, const fs::path& build_path)
 {
-    bool release;
-    std::string path;
-    
-    create_directory_nx(const std::string& base, const std::string& dir)
-     : release(true)
-    {
-        if(!base.empty())
-        {
-            int err;
-            struct stat sb;
-            
-            if(base.back() == '/')
-                path = base + dir;
-            else
-                path = base + '/' + dir;
-            
-            err = stat(path.c_str(), &sb);
-            if(!err)
-                throw std::runtime_error("Project folder already exists.");
-
-            err = mkdir(path.c_str(), 0777);
-            if(err)
-                throw std::system_error(errno, std::system_category(), std::string("mkdir(") + path + ")");
-        }
-    }
-    
-    void dismiss()
-    {
-        release = false;
-    }
-    
-    std::string child(const std::string& file)
-    {
-        if(path.empty())
-            throw error("attempt to retrieve child of empty path");
-        return path + '/' + file;
-    }
-    
-    ~create_directory_nx()
-    {
-        if(release && !path.empty())
-        {
-            // TODO recursive remove
-            int err = rmdir(path.c_str());
-            if(err)
-            {
-                fprintf(stderr, "Unable to remove path '%s'\n", path.c_str());
-            }
-        }
-    }
-};
-
-project_t create(const std::string& name, const std::string& path, const std::string& build_path)
-{
-    if(name.empty())
-        throw error("project name empty");
-    if(path.empty())
-        throw error("source path empty");
+    if(!exists(path))
+        throw error("source path does not exist");
+    if(!build_path.empty() && !exists(build_path))
+        throw error("build path does not exist");
 
     try
     {
-        int err;
-        struct stat sb;
-        err = stat(path.c_str(), &sb);
-        if(err)
-            throw std::system_error(errno, std::system_category(), std::string("stat(") + path + ")");
-        
         project_t project;
         
-        create_directory_nx root(path, name);
-        create_directory_nx build_root(build_path, name);
-
-        project.repo = git::init(root.path.c_str());
-        project.config = cmake::create(name, root.path, build_root.path);
+        if(exists(path / name))
+            throw std::runtime_error("Project folder already exists.");
+        
+        create_directory(path / name);
+        
+        project.repo = git::init(path / name);
+        
+        if(!build_path.empty())
+            project.config = cmake::create(name, path / name, build_path / name);
+        else
+            project.config = cmake::create(name, path / name);
 
         {
-            std::ofstream os(root.child("README.md"));
+            fs::ofstream os(path / name / "README.md");
             os << name << "\n";
             os << std::string(name.size(), '=') << "\n";
         }
         
         // TODO commit basic project structure to git.
-        root.dismiss();
         
         if(!build_path.empty())
         {
+            create_directory(build_path / name);
+            
             project.config.generate();
             project.config.build();
-            
-            build_root.dismiss();
         }
 
         return project;
     }
     catch(...)
     {
+        try
+        {
+            remove_all(path / name);
+            
+            if(!build_path.empty())
+                remove_all(build_path / name);
+        }
+        catch(...)
+        {
+            std::throw_with_nested(error("project::create failed (cleanup failed.)"));
+        }
         std::throw_with_nested(error("project::create failed"));
     }
 }
 
-project_t open(const std::string& path, const std::string& build_path)
+project_t open(const fs::path& path, const fs::path& build_path)
 {
-    if(path.empty())
-        throw error("source path empty");
-    if(build_path.empty())
-        throw error("build path empty");
+    if(!exists(path))
+        throw error("source path does not exist");
+    if(!build_path.empty() && !exists(build_path))
+        throw error("build path does not exist");
 
     try
     {

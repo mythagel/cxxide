@@ -28,6 +28,7 @@
 #include "git/git.h"
 #include "cmake/cmake_project.h"
 #include <stdexcept>
+#include <boost/filesystem.hpp>
 
 namespace cxxide
 {
@@ -42,8 +43,8 @@ struct error : std::runtime_error
 
 class project_t
 {
-friend project_t create(const std::string& name, const std::string& path, const std::string& build_path);
-friend project_t open(const std::string& path, const std::string& build_path);
+friend project_t create(const std::string& name, const boost::filesystem::path& path, const boost::filesystem::path& build_path);
+friend project_t open(const boost::filesystem::path& path, const boost::filesystem::path& build_path);
 
 private:
     git::repo_t repo;
@@ -67,9 +68,9 @@ public:
     ~project_t();
 };
 
-project_t create(const std::string& name, const std::string& path, const std::string& build_path = {});
+project_t create(const std::string& name, const boost::filesystem::path& path, const boost::filesystem::path& build_path = {});
 
-project_t open(const std::string& path, const std::string& build_path = {});
+project_t open(const boost::filesystem::path& path, const boost::filesystem::path& build_path = {});
 
 ///*
 // git clone url into path
