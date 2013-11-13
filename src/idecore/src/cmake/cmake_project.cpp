@@ -79,8 +79,8 @@ project_t create(const std::string& name, const fs::path& source_path, const fs:
     try
     {
         project_t project;
-        project.source_path = source_path;
-        project.build_path = build_path;
+        project.source_path = canonical(source_path);
+        project.build_path = canonical(build_path);
         
         project.configuration.name = name;
         write(source_path, project.configuration);
@@ -98,8 +98,8 @@ project_t open(const fs::path& source_path, const fs::path& build_path)
     try
     {
         project_t project;
-        project.source_path = source_path;
-        project.build_path = build_path;
+        project.source_path = canonical(source_path);
+        project.build_path = canonical(build_path);
         project.configuration = cmake::read(project.source_path);
         
         return project;
