@@ -51,69 +51,58 @@ source create tu blah [--lang c++/c]
 
 typedef void command_t(int argc, char* argv[]);
 
-void create(int argc, char* argv[])
-{
-    po::options_description generic("Allowed options");
-    generic.add_options()
-        ("help", "produce help message")
-        ("name", po::value<std::string>(), "project name")
-        ("path", po::value<std::string>()->default_value(fs::current_path().native()), "project path (default: cwd)")
-    ;
+void create(int argc, char* argv[]);
 
-    po::options_description hidden("Hidden options");
-    hidden.add_options()
-        ("command", po::value<std::string>(), "Command to execute")
-    ;
-
-    po::options_description cmdline_options;
-    cmdline_options.add(generic).add(hidden);
-
-    po::options_description visible;
-    visible.add(generic);
-
-    po::positional_options_description p;
-    p.add("command", 1);
-
-    po::variables_map vm;
-    store(po::command_line_parser(argc, argv). positional(p).options(cmdline_options).run(), vm);
-    notify(vm);
-
-    if (vm.count("help"))
-    {
-        std::cout << visible << "\n";
-        return;
-    }
-
-    //auto path = ;
-    std::string name;
-    
-    //auto project = project::create(name, path);
-}
-
-void usage()
-{
-    std::cerr << R"(usage: microide <command> [...]
-
-)";
-}
+po::options_description common_options("Global options");
+po::options_description user_options("microide options");
 
 int main(int argc, char* argv[])
 {
-    if(argc == 1)
-    {
-        usage();
-        return 1;
-    }
-    
-    auto cmd = argv[1];
-    
-    std::map<std::string, command_t*> commands = 
-    {
-        {"create", create}
-    };
-    
     try
     {
+        common_options.add_options()
+            ("help", "display this help and exit")
+            ("path", po::value<std::string>()->default_value(fs::current_path().native()), "Project path")
+            ("build-path", po::value<std::string>(), "Project build path")
+        ;
+
+        po::options_description hidden;
+        hidden.add_options()
+            ("command", po::value<std::string>()->required(), "Command to execute")
+            ("subcommand_args", po::value<std::string>(), "Subcommand arguments")
+        ;
+
+        user_options.add(common_options);
+
+        po::positional_options_description p;
+        p.add("command", 1);
+        p.add("subcommand_args", -1);
+        po::options_description desc;
+        desc.add(common_options).add(hidden);
+
+        po::variables_map vm;
+        store(po::command_line_parser(argc, argv).positional(p).options(desc).allow_unregistered().run(), vm);
+
+        if (vm.count("help") && !vm.count("command"))
+        {
+            std::cout << user_options << "\n";
+            return 0;
+        }
+        notify(vm);
+
+        if (!vm.count("help") && !vm.count("command"))
+        {
+            std::cout << user_options << "\n";
+            return 1;
+        }
+
+        auto cmd = vm["command"].as<std::string>();
+
+        std::map<std::string, command_t*> commands =
+        {
+            {"create", create}
+        };
+
         auto command = commands.find(cmd);
         if(command != commands.end())
         {
@@ -123,13 +112,64 @@ int main(int argc, char* argv[])
         else
         {
             std::cerr << "Unrecognised command " << cmd << "\n";
-            usage();
+            std::cout << user_options << "\n";
+            return 1;
         }
+    }
+    catch(const po::error& e)
+    {
+        print_exception(e);
+        std::cout << user_options << "\n";
+        return 1;
     }
     catch(const std::exception& e)
     {
         print_exception(e);
+        return 1;
     }
-    return 1;
+}
+
+void create(int argc, char* argv[])
+{
+    po::options_description command_options("Create options");
+    command_options.add_options()
+        ("name", po::value<std::string>()->required(), "Project name")
+    ;
+
+    po::options_description hidden;
+    hidden.add_options()
+        ("command", po::value<std::string>()->required(), "Command to execute")
+    ;
+
+    user_options.add(command_options);
+
+    po::positional_options_description p;
+    p.add("command", 1);
+    p.add("name", 1);
+    po::options_description desc;
+    desc.add(common_options).add(command_options).add(hidden);
+
+    po::variables_map vm;
+    store(po::command_line_parser(argc, argv). positional(p).options(desc).run(), vm);
+
+    if (vm.count("help"))
+    {
+        std::cout << user_options << "\n";
+        return;
+    }
+    notify(vm);
+
+    auto path = vm["path"].as<std::string>();
+    auto name = vm["name"].as<std::string>();
+    
+    if(vm.count("build-path"))
+    {
+        auto build_path = vm["build-path"].as<std::string>();
+        auto project = project::create(name, path, build_path);
+    }
+    else
+    {
+        auto project = project::create(name, path);
+    }
 }
 
