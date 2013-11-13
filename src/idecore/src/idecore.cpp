@@ -133,8 +133,10 @@ project_t open(const fs::path& path, const fs::path& build_path)
     {
         project_t project;
         
+        /* Uses git to locate the project root path given any child path
+         * Then passes that root path to the cmake subsystem to open. */
         project.repo = git::open(path);
-        project.config = cmake::open(path, build_path);
+        project.config = cmake::open(project.repo.root, build_path);
 
         return project;
     }
