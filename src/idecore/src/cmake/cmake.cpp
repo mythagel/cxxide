@@ -184,7 +184,7 @@ void write_template(const std::string& name, const fs::path& path)
         os << "PROJECT( " << name << " )\n";
         os << "\n";
         os << "##<< Managed Configuration >>##\n";
-        os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/Modules/\" )\n";
+        os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/modules/\" )\n";
         os << "INCLUDE( idecore )\n";
         os << "\n";
         os << "##<< Referenced Packages >>##\n";
