@@ -26,6 +26,7 @@
 #define LISTWRITER_H_
 #include "listparser.h"
 #include <iosfwd>
+#include <set>
 
 namespace cxxide
 {
@@ -43,6 +44,7 @@ private:
     const directory_t& directory;
     bool is_managed;
     bool skip;
+    std::set<std::string> written_targets;
 public:
     list_rewriter_t(std::ostream& os, const configuration_t* config, const directory_t& directory);
 

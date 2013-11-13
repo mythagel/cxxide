@@ -27,11 +27,127 @@
 #include <string>
 #include <ostream>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 namespace cxxide
 {
 namespace cmake
 {
+
+namespace
+{
+
+void write_package(std::ostream& os, const std::string& package)
+{
+    os << "FIND_PACKAGE( " << package << " )\n";
+}
+void write_definitions(std::ostream& os, const std::vector<std::string>& definitions)
+{
+    os << "ADD_DEFINITIONS( ";
+    for(auto& define : definitions)
+        os << define << " ";
+    os << ")\n";
+}
+void write_includes(std::ostream& os, const std::vector<std::string>& includes)
+{
+    os << "INCLUDE_DIRECTORIES( ";
+    for(auto& include : includes)
+        os << include << " ";
+    os << ")\n";
+}
+
+void write_target(std::ostream& os, const target_t& target)
+{
+    std::string target_var = target.name;
+    boost::to_upper(target_var);
+    
+    if(!target.sources.empty())
+    {
+        os << "SET( " << target_var << "_SOURCES ";
+        for(auto& source : target.sources)
+            os << "\n    " << source << " ";
+        os << ")\n";
+    }
+    
+    switch(target.type)
+    {
+        case target_t::executable:
+            os << "ADD_EXECUTABLE( " << target.name << " ${" << target_var << "_SOURCES} )\n";
+            break;
+        case target_t::shared_library:
+            os << "ADD_LIBRARY( " << target.name << " SHARED ${" << target_var << "_SOURCES} )\n";
+            break;
+        case target_t::static_library:
+            os << "ADD_LIBRARY( " << target.name << " STATIC ${" << target_var << "_SOURCES} )\n";
+            break;
+    }
+
+    if(!target.label.empty())
+        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
+    
+    if(!target.version.empty())
+    {
+        os << "SET( " << target_var << "_MAJOR_VERSION " << target.version.major << " )\n";
+        os << "SET( " << target_var << "_MINOR_VERSION " << target.version.minor << " )\n";
+        os << "SET( " << target_var << "_PATCH_VERSION " << target.version.patch << " )\n";
+        os << "SET( " << target_var << "_VERSION ${" << target_var << "_MAJOR_VERSION}.${" << target_var << "_MINOR_VERSION}.${" << target_var << "_PATCH_VERSION} )\n";
+        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY VERSION ${" << target_var << "_VERSION} )\n";
+        if(target.type == target_t::shared_library)
+            os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY SOVERSION ${" << target_var << "_MAJOR_VERSION} )\n";
+    }
+
+    if(!target.packages.empty())
+    {
+        os << "SET_TARGET_PACKAGES( TARGET " << target.name << " PACKAGES ";
+        for(auto& package : target.packages)
+            os << package << " ";
+        os << ")\n";
+    }
+    
+    if(!target.compile_flags.empty())
+        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << target.compile_flags << "\" )\n";
+    
+    if(!target.definitions.empty())
+    {
+        os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
+        for(auto define : target.definitions)
+        {
+            if(define.find("-D") == 0)
+                define = define.substr(2);
+            os << define << " ";
+        }
+        os << ")\n";
+    }
+    
+    if(!target.includes.empty())
+    {
+        os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY INCLUDE_DIRECTORIES ";
+        for(auto& include : target.includes)
+            os << "\n    " << include << " ";
+        os << ")\n";
+    }
+    
+    if(!target.link_flags.empty())
+        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \" " << target.link_flags << "\" )\n";
+    
+    if(!target.libs.empty())
+    {
+        os << "SET_TARGET_LIBRARIES( TARGET " << target.name << " LIBS ";
+        for(auto& lib : target.libs)
+            os << lib << " ";
+        os << ")\n";
+    }
+    if(!target.depends.empty())
+    {
+        os << "ADD_DEPENDENCIES( " << target.name << " ";
+        for(auto& dep : target.depends)
+            os << dep << " ";
+        os << ")\n";
+    }
+}
+
+}
 
 list_rewriter_t::list_rewriter_t(std::ostream& os, const configuration_t* config, const directory_t& directory)
  : os(os), config(config), directory(directory), is_managed(false), skip(false)
@@ -64,7 +180,7 @@ void list_rewriter_t::comment(const char* c, const char* end)
             {
                 os << "\n";
                 for(auto& package : config->packages)
-                    os << "FIND_PACKAGE( " << package << " )\n";
+                    write_package(os, package);
             }
             skip = !skip;
         }
@@ -75,20 +191,10 @@ void list_rewriter_t::comment(const char* c, const char* end)
                 os << "\n";
                 
                 if(!directory.definitions.empty())
-                {
-                    os << "ADD_DEFINITIONS( ";
-                    for(auto& define : directory.definitions)
-                        os << define << " ";
-                    os << ")\n";
-                }
+                    write_definitions(os, directory.definitions);
 
                 if(!directory.includes.empty())
-                {
-                    os << "INCLUDE_DIRECTORIES( ";
-                    for(auto& include : directory.includes)
-                        os << include << " ";
-                    os << ")\n";
-                }
+                    write_includes(os, directory.includes);
                 
                 if(!directory.compile_flags.cxx.empty())
                     os << "SET( CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " << directory.compile_flags.cxx << "\" )\n";
@@ -129,104 +235,41 @@ void list_rewriter_t::comment(const char* c, const char* end)
             }
             skip = !skip;
         }
-        else if(cmt == "#<< Target Properties >>##")
+        else if(boost::starts_with(cmt, "#<< Target ") && boost::ends_with(cmt, " Properties >>##"))
         {
+            std::string target_name = cmt;
+            boost::replace_first(target_name, "#<< Target ", "");
+            boost::replace_last(target_name, " Properties >>##", "");
+            
+            auto target_exists = [this](const std::string& name) -> bool
+            {
+                for(auto& target : directory.targets)
+                    if(target.name == name) return true;
+                return false;
+            };
+            auto get_target = [this](const std::string& name) -> const target_t&
+            {
+                for(const auto& target : directory.targets)
+                    if(target.name == name) return target;
+                throw std::logic_error("target not found");
+            };
+            
+            /* An alternative exit point for this function.
+             * If the named target does not exist, do not write 
+             * the header or any of the content. */
+            if(!target_exists(target_name))
+            {
+                if(skip) os << "\n";
+                skip = !skip;
+                return;
+            }
+            
             if(skip)
             {
                 os << "\n";
-                /*
-                TODO write targets in individual sections
-                so they can be made conditional etc.
-                */
-                for(auto& target : directory.targets)
-                {
-                    std::string target_var = target.name;
-                    boost::to_upper(target_var);
-                    
-                    if(!target.sources.empty())
-                    {
-                        os << "SET( " << target_var << "_SOURCES ";
-                        for(auto& source : target.sources)
-                            os << "\n    " << source << " ";
-                        os << ")\n";
-                    }
-                    
-                    switch(target.type)
-                    {
-                        case target_t::executable:
-                            os << "ADD_EXECUTABLE( " << target.name << " ${" << target_var << "_SOURCES} )\n";
-                            break;
-                        case target_t::shared_library:
-                            os << "ADD_LIBRARY( " << target.name << " SHARED ${" << target_var << "_SOURCES} )\n";
-                            break;
-                        case target_t::static_library:
-                            os << "ADD_LIBRARY( " << target.name << " STATIC ${" << target_var << "_SOURCES} )\n";
-                            break;
-                    }
-
-                    if(!target.label.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
-                    
-                    if(!target.version.empty())
-                    {
-                        os << "SET( " << target_var << "_MAJOR_VERSION " << target.version.major << " )\n";
-                        os << "SET( " << target_var << "_MINOR_VERSION " << target.version.minor << " )\n";
-                        os << "SET( " << target_var << "_PATCH_VERSION " << target.version.patch << " )\n";
-                        os << "SET( " << target_var << "_VERSION ${" << target_var << "_MAJOR_VERSION}.${" << target_var << "_MINOR_VERSION}.${" << target_var << "_PATCH_VERSION} )\n";
-                        os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY VERSION ${" << target_var << "_VERSION} )\n";
-                        if(target.type == target_t::shared_library)
-                            os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY SOVERSION ${" << target_var << "_MAJOR_VERSION} )\n";
-                    }
-
-                    if(!target.packages.empty())
-                    {
-                        os << "SET_TARGET_PACKAGES( TARGET " << target.name << " PACKAGES ";
-                        for(auto& package : target.packages)
-                            os << package << " ";
-                        os << ")\n";
-                    }
-                    
-                    if(!target.compile_flags.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << target.compile_flags << "\" )\n";
-                    
-                    if(!target.definitions.empty())
-                    {
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
-                        for(auto define : target.definitions)
-                        {
-                            if(define.find("-D") == 0)
-                                define = define.substr(2);
-                            os << define << " ";
-                        }
-                        os << ")\n";
-                    }
-                    
-                    if(!target.includes.empty())
-                    {
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND PROPERTY INCLUDE_DIRECTORIES ";
-                        for(auto& include : target.includes)
-                            os << "\n    " << include << " ";
-                        os << ")\n";
-                    }
-                    
-                    if(!target.link_flags.empty())
-                        os << "SET_PROPERTY( TARGET " << target.name << " APPEND_STRING PROPERTY LINK_FLAGS \" " << target.link_flags << "\" )\n";
-                    
-                    if(!target.libs.empty())
-                    {
-                        os << "SET_TARGET_LIBRARIES( TARGET " << target.name << " LIBS ";
-                        for(auto& lib : target.libs)
-                            os << lib << " ";
-                        os << ")\n";
-                    }
-                    if(!target.depends.empty())
-                    {
-                        os << "ADD_DEPENDENCIES( " << target.name << " ";
-                        for(auto& dep : target.depends)
-                            os << dep << " ";
-                        os << ")\n";
-                    }
-                }
+                written_targets.insert(target_name);
+                auto target = get_target(target_name);
+                write_target(os, target);
             }
             skip = !skip;
         }
@@ -270,6 +313,21 @@ void list_rewriter_t::end_command()
 }
 void list_rewriter_t::eof()
 {
+    auto target_written = [this](const std::string& name) -> bool
+    {
+        return written_targets.find(name) != end(written_targets);
+    };
+    for(auto& target : directory.targets)
+    {
+        if(!target_written(target.name))
+        {
+            os << "##<< Target " << target.name << " Properties >>##\n";
+            write_target(os, target);
+            os << "##<< Target " << target.name << " Properties >>##\n";
+        }
+    }
+    
+    written_targets.clear();
 }
 
 }

@@ -25,6 +25,7 @@
 #include "listreader.h"
 #include "cmake/cmake.h"
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace cxxide
 {
@@ -107,7 +108,7 @@ void list_reader_t::comment(const char* c, const char* end)
             interpret = !interpret;
             section = section_File;
         }
-        else if(cmt == "#<< Target Properties >>##")
+        else if(boost::starts_with(cmt, "#<< Target ") && boost::ends_with(cmt, " Properties >>##"))
         {
             interpret = !interpret;
             section = section_Target;

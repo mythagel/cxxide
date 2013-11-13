@@ -113,9 +113,6 @@ void write_subdirectory(const fs::path& path, const directory_t& directory)
             os << "##<< File Properties >>##\n";
             os << "##<< File Properties >>##\n";
             os << "\n";
-            os << "##<< Target Properties >>##\n";
-            os << "##<< Target Properties >>##\n";
-            os << "\n";
         }
         else
         {
@@ -195,9 +192,6 @@ void write_template(const std::string& name, const fs::path& path)
         os << "\n";
         os << "##<< File Properties >>##\n";
         os << "##<< File Properties >>##\n";
-        os << "\n";
-        os << "##<< Target Properties >>##\n";
-        os << "##<< Target Properties >>##\n";
         os << "\n";
     }
     
