@@ -79,12 +79,16 @@ repo_t open(const fs::path& path)
         system::stream_t stream;
         int err = system::exec(path.native(), {"git", "rev-parse", "--show-toplevel"}, &stream);
         if(err) throw error("git: " + stream.err);
+        if(stream.out.empty()) throw error("Unable to determine root path.");
         
-        return { stream.out, {} };
+        if(stream.out.back() == '\n')
+            stream.out.pop_back();
+
+        return { canonical(fs::path(stream.out)), {} };
     }
     catch(...)
     {
-        std::throw_with_nested(error("git init failed"));
+        std::throw_with_nested(error("git open failed"));
     }
 }
 
