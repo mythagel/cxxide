@@ -64,7 +64,7 @@ repo_t init(const fs::path& path, const init_opts& opts)
         int err = system::exec(path.native(), args, &stream);
         if(err) throw error("git: " + stream.err);
         
-        return { path, {} };
+        return { canonical(path), {} };
     }
     catch(...)
     {
