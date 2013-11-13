@@ -63,15 +63,17 @@ project_t create(const std::string& name, const fs::path& path, const fs::path& 
 {
     if(!exists(path))
         throw error("source path does not exist");
+    if(exists(path / name))
+        throw std::runtime_error("Project folder already exists.");
+    
     if(!build_path.empty() && !exists(build_path))
         throw error("build path does not exist");
+    if(!build_path.empty() && exists(build_path / name))
+        throw error("Project build folder already exists.");
 
     try
     {
         project_t project;
-        
-        if(exists(path / name))
-            throw std::runtime_error("Project folder already exists.");
         
         create_directory(path / name);
         
