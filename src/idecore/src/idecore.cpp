@@ -80,9 +80,14 @@ project_t create(const std::string& name, const fs::path& path, const fs::path& 
         project.repo = git::init(path / name);
         
         if(!build_path.empty())
+        {
+            create_directory(build_path / name);
             project.config = cmake::create(name, path / name, build_path / name);
+        }
         else
+        {
             project.config = cmake::create(name, path / name);
+        }
 
         {
             fs::ofstream os(path / name / "README.md");
@@ -94,8 +99,6 @@ project_t create(const std::string& name, const fs::path& path, const fs::path& 
         
         if(!build_path.empty())
         {
-            create_directory(build_path / name);
-            
             project.config.generate();
             project.config.build();
         }
