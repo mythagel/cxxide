@@ -57,6 +57,54 @@ void write_includes(std::ostream& os, const std::vector<std::string>& includes)
     os << ")\n";
 }
 
+bool directory_empty(const directory_t& directory)
+{
+    return
+        directory.definitions.empty() &&
+        directory.includes.empty() &&
+        directory.compile_flags.cxx.empty() &&
+        directory.compile_flags.c.empty() &&
+        directory.configure_files.empty() &&
+        directory.subdirectories.empty();
+}
+void write_directory(std::ostream& os, const directory_t& directory)
+{
+    if(!directory.definitions.empty())
+        write_definitions(os, directory.definitions);
+
+    if(!directory.includes.empty())
+        write_includes(os, directory.includes);
+
+    if(!directory.compile_flags.cxx.empty())
+        os << "SET( CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " << directory.compile_flags.cxx << "\" )\n";
+
+    if(!directory.compile_flags.c.empty())
+        os << "SET( CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " << directory.compile_flags.c << "\" )\n";
+
+    for(auto& file : directory.configure_files)
+        os << "CONFIGURE_FILE( " << file.input << " " << file.output << " )\n";
+
+    for(auto& subdir : directory.subdirectories)
+        os << "ADD_SUBDIRECTORY( " << subdir.first << " )\n";
+}
+
+void write_file(std::ostream& os, const file_t& file)
+{
+    if(!file.definitions.empty())
+    {
+        os << "SET_PROPERTY( SOURCE " << file.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
+        for(auto define : file.definitions)
+        {
+            if(define.find("-D") == 0)
+                define = define.substr(2);
+            os << define << " ";
+        }
+        os << ")\n";
+    }
+    if(!file.compile_flags.empty())
+        os << "SET_PROPERTY( SOURCE " << file.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << file.compile_flags << "\" )\n";
+}
+
 void write_target(std::ostream& os, const target_t& target)
 {
     std::string target_var = target.name;
@@ -150,7 +198,8 @@ void write_target(std::ostream& os, const target_t& target)
 }
 
 list_rewriter_t::list_rewriter_t(std::ostream& os, const configuration_t* config, const directory_t& directory)
- : os(os), config(config), directory(directory), is_managed(false), skip(false)
+ : os(os), config(config), directory(directory), is_managed(false), skip(false),
+   wrote_packages(false), wrote_directory(false), wrote_file(false)
 {
 }
 
@@ -176,8 +225,20 @@ void list_rewriter_t::comment(const char* c, const char* end)
         }
         else if(config && cmt == "#<< Referenced Packages >>##")
         {
+            /* An alternative exit point for this function.
+             * If there are no packages, do not write
+             * the header nor any of the content. */
+            if(config->packages.empty())
+            {
+                if(skip) os << "\n";
+                skip = !skip;
+                return;
+            }
+
             if(skip)
             {
+                wrote_packages = true;
+
                 os << "\n";
                 for(auto& package : config->packages)
                     write_package(os, package);
@@ -186,52 +247,44 @@ void list_rewriter_t::comment(const char* c, const char* end)
         }
         else if(cmt == "#<< Directory Properties >>##")
         {
+            /* An alternative exit point for this function.
+             * If the directory is empty, do not write
+             * the header nor any of the content. */
+            if(directory_empty(directory))
+            {
+                if(skip) os << "\n";
+                skip = !skip;
+                return;
+            }
+
             if(skip)
             {
+                wrote_directory = true;
+                
                 os << "\n";
-                
-                if(!directory.definitions.empty())
-                    write_definitions(os, directory.definitions);
-
-                if(!directory.includes.empty())
-                    write_includes(os, directory.includes);
-                
-                if(!directory.compile_flags.cxx.empty())
-                    os << "SET( CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} " << directory.compile_flags.cxx << "\" )\n";
-
-                if(!directory.compile_flags.c.empty())
-                    os << "SET( CMAKE_C_FLAGS \"${CMAKE_C_FLAGS} " << directory.compile_flags.c << "\" )\n";
-
-                for(auto& file : directory.configure_files)
-                    os << "CONFIGURE_FILE( " << file.input << " " << file.output << " )\n";
-
-                for(auto& subdir : directory.subdirectories)
-                    os << "ADD_SUBDIRECTORY( " << subdir.first << " )\n";
-                
+                write_directory(os, directory);
             }
             skip = !skip;
         }
         else if(cmt == "#<< File Properties >>##")
         {
+            /* An alternative exit point for this function.
+             * If there are no files to write, do not write
+             * the header nor any of the content. */
+            if(directory.files.empty())
+            {
+                if(skip) os << "\n";
+                skip = !skip;
+                return;
+            }
+
             if(skip)
             {
+                wrote_file = true;
+
                 os << "\n";
                 for(auto& file : directory.files)
-                {
-                    if(!file.definitions.empty())
-                    {
-                        os << "SET_PROPERTY( SOURCE " << file.name << " APPEND PROPERTY COMPILE_DEFINITIONS ";
-                        for(auto define : file.definitions)
-                        {
-                            if(define.find("-D") == 0)
-                                define = define.substr(2);
-                            os << define << " ";
-                        }
-                        os << ")\n";
-                    }
-                    if(!file.compile_flags.empty())
-                        os << "SET_PROPERTY( SOURCE " << file.name << " APPEND_STRING PROPERTY COMPILE_FLAGS \" " << file.compile_flags << "\" )\n";
-                }
+                    write_file(os, file);
             }
             skip = !skip;
         }
@@ -256,7 +309,7 @@ void list_rewriter_t::comment(const char* c, const char* end)
             
             /* An alternative exit point for this function.
              * If the named target does not exist, do not write 
-             * the header or any of the content. */
+             * the header nor any of the content. */
             if(!target_exists(target_name))
             {
                 if(skip) os << "\n";
@@ -266,8 +319,9 @@ void list_rewriter_t::comment(const char* c, const char* end)
             
             if(skip)
             {
-                os << "\n";
                 written_targets.insert(target_name);
+
+                os << "\n";
                 auto target = get_target(target_name);
                 write_target(os, target);
             }
@@ -313,6 +367,38 @@ void list_rewriter_t::end_command()
 }
 void list_rewriter_t::eof()
 {
+    if(config && !wrote_packages && !config->packages.empty())
+    {
+        os << "\n";
+        os << "##<< Referenced Packages >>##\n";
+        for(auto& package : config->packages)
+            write_package(os, package);
+        os << "##<< Referenced Packages >>##\n";
+    }
+    wrote_packages = false;
+
+
+    if(!wrote_directory && !directory_empty(directory))
+    {
+        os << "\n";
+        os << "##<< Directory Properties >>##\n";
+        write_directory(os, directory);
+        os << "##<< Directory Properties >>##\n";
+    }
+    wrote_directory = false;
+
+
+    if(!wrote_file && !directory.files.empty())
+    {
+        os << "\n";
+        os << "##<< File Properties >>##\n";
+        for(auto& file : directory.files)
+            write_file(os, file);
+        os << "##<< File Properties >>##\n";
+    }
+    wrote_file = false;
+
+
     auto target_written = [this](const std::string& name) -> bool
     {
         return written_targets.find(name) != end(written_targets);
@@ -321,12 +407,12 @@ void list_rewriter_t::eof()
     {
         if(!target_written(target.name))
         {
+            os << "\n";
             os << "##<< Target " << target.name << " Properties >>##\n";
             write_target(os, target);
             os << "##<< Target " << target.name << " Properties >>##\n";
         }
     }
-    
     written_targets.clear();
 }
 

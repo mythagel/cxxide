@@ -104,30 +104,20 @@ void write_subdirectory(const fs::path& path, const directory_t& directory)
         if(!os)
             throw error(std::string("Unable to open ") + (path / "CMakeLists.txt.tmp").native());
         
-        if(!ifs)
-        {
-            os << "\n";
-            os << "##<< Directory Properties >>##\n";
-            os << "##<< Directory Properties >>##\n";
-            os << "\n";
-            os << "##<< File Properties >>##\n";
-            os << "##<< File Properties >>##\n";
-            os << "\n";
-        }
-        else
+        std::string source;
+        if(ifs)
         {
             std::noskipws(ifs);
-            std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-            
-            list_rewriter_t rewrite(os, nullptr, directory);
-            
-            auto c = source.c_str();
-            auto end = c + source.size();
-            
-            // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
-            rewrite.parse(c, end);
-            
+            source = std::string{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
         }
+
+        list_rewriter_t rewrite(os, nullptr, directory);
+
+        auto c = source.c_str();
+        auto end = c + source.size();
+
+        // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
+        rewrite.parse(c, end);
         
         // Recursively write subdirectory files.
         for(auto& subdir : directory.subdirectories)
@@ -183,15 +173,6 @@ void write_template(const std::string& name, const fs::path& path)
         os << "##<< Managed Configuration >>##\n";
         os << "SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${CMAKE_SOURCE_DIR}/cmake/modules/\" )\n";
         os << "INCLUDE( idecore )\n";
-        os << "\n";
-        os << "##<< Referenced Packages >>##\n";
-        os << "##<< Referenced Packages >>##\n";
-        os << "\n";
-        os << "##<< Directory Properties >>##\n";
-        os << "##<< Directory Properties >>##\n";
-        os << "\n";
-        os << "##<< File Properties >>##\n";
-        os << "##<< File Properties >>##\n";
         os << "\n";
     }
     

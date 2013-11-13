@@ -44,7 +44,11 @@ private:
     const directory_t& directory;
     bool is_managed;
     bool skip;
+
     std::set<std::string> written_targets;
+    bool wrote_packages;
+    bool wrote_directory;
+    bool wrote_file;
 public:
     list_rewriter_t(std::ostream& os, const configuration_t* config, const directory_t& directory);
 
