@@ -52,7 +52,7 @@ source create tu blah [--lang c++/c]
 typedef int command_t(int argc, char* argv[]);
 
 int create(int argc, char* argv[]);
-int dir(int argc, char* argv[]);
+int dir_create(int argc, char* argv[]);
 
 po::options_description common_options("Global options");
 po::options_description user_options("microide options");
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
         std::map<std::string, command_t*> commands =
         {
             {"create", create},
-            {"dir", dir}
+            {"create-dir", dir_create}
         };
 
         auto command = commands.find(cmd);
@@ -161,36 +161,33 @@ int create(int argc, char* argv[])
     notify(vm);
 
     fs::path path = vm["path"].as<std::string>();
-    auto name = vm["name"].as<std::string>();
     fs::path build_path;
     if(vm.count("build-path"))
         build_path = vm["build-path"].as<std::string>();
+    auto name = vm["name"].as<std::string>();
 
     auto project = project::create(name, path, build_path);
 
     return 0;
 }
 
-int dir(int argc, char* argv[])
+int dir_create(int argc, char* argv[])
 {
     po::options_description command_options("Directory options");
     command_options.add_options()
-//        ("name", po::value<std::string>()->required(), "Directory name")
+        ("name", po::value<std::string>()->required(), "Directory name")
     ;
 
     po::options_description hidden;
     hidden.add_options()
         ("command", po::value<std::string>()->required(), "Command to execute")
-        ("subcommand", po::value<std::string>()->required(), "Subcommand to execute")
-        ("subcommand_args", po::value<std::vector<std::string>>(), "Subcommand arguments")
     ;
 
     user_options.add(command_options);
 
     po::positional_options_description p;
     p.add("command", 1);
-    p.add("subcommand", 1);
-    p.add("subcommand_args", -1);
+    p.add("name", 1);
     po::options_description desc;
     desc.add(common_options).add(command_options).add(hidden);
 
@@ -204,35 +201,25 @@ int dir(int argc, char* argv[])
     }
     notify(vm);
 
-    /* Better idea would be to part the initial generic directory arguments
-     * Then reparse based on the selected subcommand. */
-
     fs::path path = vm["path"].as<std::string>();
     fs::path build_path;
     if(vm.count("build-path"))
         build_path = vm["build-path"].as<std::string>();
-
-    auto cmd = vm["subcommand"].as<std::string>();
-    auto args = vm["subcommand_args"].as<std::vector<std::string>>();
+    auto name = vm["name"].as<std::string>();
 
     auto project = project::open(path, build_path);
 
-    if(cmd == "create")
-    {
-        if(args.size() != 1)
-        {
-            std::cout << user_options << "\n";
-            return 1;
-        }
-        // TODO
-    }
-    else
-    {
-        std::cerr << "Unrecognised subcommand " << cmd << "\n";
-        std::cout << user_options << "\n";
-        return 1;
-    }
+    /* BIIIG TODO.
+     * What is the interface for modifing the configuration?
+     * ATM the cmake::configuration_t structure is hidden behind:
+     * cmake::project_t
+     * project::project_t
+     * i.e. The idecore project contains a cmake project which contains a configuration
+     * that i want to modify under three levels of nesting.
+     * NOT a good idea to expose the raw structure - some consistency is required to be maintained.
+     * probably better to implement code level functions to modify the structure. */
 
+    throw std::logic_error("Unimplemented.");
     return 0;
 }
 
