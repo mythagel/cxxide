@@ -36,6 +36,8 @@ namespace cmake
 {
 namespace config
 {
+namespace detail
+{
 
 struct target_t
 {
@@ -111,6 +113,7 @@ struct configuration_t
     configuration_t();
 };
 
+}
 }
 }
 }

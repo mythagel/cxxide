@@ -28,6 +28,7 @@
 #include <vector>
 #include <set>
 #include <stdexcept>
+#include <memory>
 #include <boost/filesystem.hpp>
 #include "../../src/cmake/priv.h"
 
@@ -49,8 +50,35 @@ struct error_unmanaged : error
     virtual ~error_unmanaged() noexcept;
 };
 
-void write(const boost::filesystem::path& root_path, const configuration_t& config);
-configuration_t read(const boost::filesystem::path& root_path);
+//class directory
+//{
+//private:
+//    std::shared_ptr<detail::directory_t> dir;
+//public:
+//    directory();
+//    directory(std::shared_ptr<detail::directory_t> dir);
+//};
+
+//class configuration
+//{
+//private:
+//    std::shared_ptr<detail::configuration_t> config;
+//public:
+//    configuration();
+//    explicit configuration(std::shared_ptr<detail::configuration_t> config);
+
+//    std::string name() const;
+//    bool managed() const;
+
+//    typedef std::set<std::string>::const_iterator package_iterator;
+//    void add_package(const std::string& name);
+//    void remove_package(const std::string& name);
+//    package_iterator package_begin() const;
+//    package_iterator package_end() const;
+//};
+
+void write(const boost::filesystem::path& root_path, const detail::configuration_t& config);
+detail::configuration_t read(const boost::filesystem::path& root_path);
 
 }
 }

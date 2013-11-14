@@ -49,7 +49,7 @@ private:
     boost::filesystem::path source_path;
     boost::filesystem::path build_path;
     
-    config::configuration_t configuration;
+    config::detail::configuration_t configuration;
 public:
     std::string name() const;
     bool managed() const;

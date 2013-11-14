@@ -35,14 +35,17 @@ namespace cmake
 namespace config
 {
 
+namespace detail
+{
 struct configuration_t;
 struct directory_t;
+}
 
 class list_reader_t : public listparser_t
 {
 private:
-    configuration_t* config;
-    directory_t* directory;
+    detail::configuration_t* config;
+    detail::directory_t* directory;
     bool is_managed;
     bool interpret;
     enum 
@@ -82,7 +85,7 @@ private:
     command_t command;
     unsigned int nesting;
 public:
-    list_reader_t(configuration_t* config, directory_t* directory);
+    list_reader_t(detail::configuration_t* config, detail::directory_t* directory);
 
     bool managed() const;
 

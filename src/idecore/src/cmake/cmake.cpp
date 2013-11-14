@@ -44,6 +44,8 @@ namespace cmake
 namespace config
 {
 
+using namespace detail;
+
 error::error(const std::string& what)
  : std::runtime_error(what)
 {

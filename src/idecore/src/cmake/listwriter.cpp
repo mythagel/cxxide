@@ -24,6 +24,7 @@
 
 #include "listwriter.h"
 #include "cmake/cmake.h"
+#include "priv.h"
 #include <string>
 #include <ostream>
 #include <boost/algorithm/string/case_conv.hpp>
@@ -36,6 +37,11 @@ namespace cmake
 {
 namespace config
 {
+
+using detail::target_t;
+using detail::file_t;
+using detail::directory_t;
+using detail::configuration_t;
 
 namespace
 {

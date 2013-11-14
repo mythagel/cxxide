@@ -95,7 +95,7 @@ project_t create(const std::string& name, const fs::path& source_path, const fs:
         project.build_path = canonical(build_path);
         
         project.configuration.name = name;
-        write(source_path, project.configuration);
+        cmake::config::write(source_path, project.configuration);
 
         return project;
     }

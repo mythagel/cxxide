@@ -35,15 +35,18 @@ namespace cmake
 namespace config
 {
 
+namespace detail
+{
 struct configuration_t;
 struct directory_t;
+}
 
 class list_rewriter_t : public listparser_t
 {
 private:
     std::ostream& os;
-    const configuration_t* config;
-    const directory_t& directory;
+    const detail::configuration_t* config;
+    const detail::directory_t& directory;
     bool is_managed;
     bool skip;
 
@@ -52,7 +55,7 @@ private:
     bool wrote_directory;
     bool wrote_file;
 public:
-    list_rewriter_t(std::ostream& os, const configuration_t* config, const directory_t& directory);
+    list_rewriter_t(std::ostream& os, const detail::configuration_t* config, const detail::directory_t& directory);
 
     bool managed() const;
 
