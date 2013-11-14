@@ -50,6 +50,14 @@ error::~error() noexcept
 {
 }
 
+error_unmanaged::error_unmanaged()
+ : error("Configuration is unmanaged")
+{
+}
+error_unmanaged::~error_unmanaged() noexcept
+{
+}
+
 target_t::target_t()
  : type(executable)
 {
@@ -234,8 +242,7 @@ void write_template(const std::string& name, const fs::path& path)
 
 void write(const fs::path& root_path, const configuration_t& config)
 {
-    if(!config.managed)
-        throw error("Invalid attempt to write unmanaged configuration.");
+    if(!config.managed) throw error_unmanaged();
     
     try
     {

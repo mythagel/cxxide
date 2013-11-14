@@ -40,6 +40,11 @@ struct error : std::runtime_error
     error(const std::string& what);
     virtual ~error() noexcept;
 };
+struct error_unmanaged : error
+{
+    error_unmanaged();
+    virtual ~error_unmanaged() noexcept;
+};
 
 struct target_t
 {
@@ -108,6 +113,7 @@ struct configuration_t
 {
     std::string name;
     bool managed;
+
     std::set<std::string> packages;
     directory_t directory;
     

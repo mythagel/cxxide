@@ -36,6 +36,10 @@ std::string project_t::name() const
 {
     return configuration.name;
 }
+bool project_t::managed() const
+{
+    return configuration.managed;
+}
 
 void project_t::generate()
 {

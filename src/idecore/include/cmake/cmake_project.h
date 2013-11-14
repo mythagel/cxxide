@@ -45,6 +45,7 @@ private:
     configuration_t configuration;
 public:
     std::string name() const;
+    bool managed() const;
 
     void generate();
     void build();
