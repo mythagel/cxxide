@@ -31,6 +31,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 list_reader_t::command_t::command_t()
  : type(UNKNOWN)
@@ -517,6 +519,7 @@ void list_reader_t::eof()
 {
 }
 
+}
 }
 }
 

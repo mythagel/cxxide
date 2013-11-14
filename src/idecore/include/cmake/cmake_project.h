@@ -25,13 +25,20 @@
 #ifndef CMAKE_PROJECT_H_
 #define CMAKE_PROJECT_H_
 #include <string>
-#include "cmake.h"
+#include <stdexcept>
 #include <boost/filesystem.hpp>
+#include "cmake.h"
 
 namespace cxxide
 {
 namespace cmake
 {
+
+struct error : std::runtime_error
+{
+    error(const std::string& what);
+    virtual ~error() noexcept;
+};
 
 class project_t
 {
@@ -42,7 +49,7 @@ private:
     boost::filesystem::path source_path;
     boost::filesystem::path build_path;
     
-    configuration_t configuration;
+    config::configuration_t configuration;
 public:
     std::string name() const;
     bool managed() const;
@@ -50,6 +57,8 @@ public:
     void generate();
     void build();
 };
+
+struct 
 
 project_t create(const std::string& name, const boost::filesystem::path& source_path, const boost::filesystem::path& build_path = {});
 project_t open(const boost::filesystem::path& source_path, const boost::filesystem::path& build_path = {});

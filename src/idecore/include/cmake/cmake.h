@@ -34,6 +34,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 struct error : std::runtime_error
 {
@@ -123,6 +125,7 @@ struct configuration_t
 void write(const boost::filesystem::path& root_path, const configuration_t& config);
 configuration_t read(const boost::filesystem::path& root_path);
 
+}
 }
 }
 

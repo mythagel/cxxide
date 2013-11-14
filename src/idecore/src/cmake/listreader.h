@@ -32,6 +32,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 struct configuration_t;
 struct directory_t;
@@ -96,6 +98,7 @@ public:
     virtual ~list_reader_t() = default;
 };
 
+}
 }
 }
 

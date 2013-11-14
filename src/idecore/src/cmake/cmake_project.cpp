@@ -32,6 +32,14 @@ namespace cxxide
 namespace cmake
 {
 
+error::error(const std::string& what)
+ : std::runtime_error(what)
+{
+}
+error::~error() noexcept
+{
+}
+
 std::string project_t::name() const
 {
     return configuration.name;
@@ -104,7 +112,7 @@ project_t open(const fs::path& source_path, const fs::path& build_path)
         project_t project;
         project.source_path = canonical(source_path);
         project.build_path = canonical(build_path);
-        project.configuration = cmake::read(project.source_path);
+        project.configuration = cmake::config::read(project.source_path);
         
         return project;
     }

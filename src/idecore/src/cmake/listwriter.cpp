@@ -34,6 +34,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 namespace
 {
@@ -416,6 +418,7 @@ void list_rewriter_t::eof()
     written_targets.clear();
 }
 
+}
 }
 }
 

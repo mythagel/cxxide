@@ -26,7 +26,7 @@ void print_exception(const std::exception& e, int level = 0)
     }
 }
 
-std::string str(const cmake::target_t& target, int level)
+std::string str(const cmake::config::target_t& target, int level)
 {
     std::stringstream s;
     std::string p(level, ' ');
@@ -38,13 +38,13 @@ std::string str(const cmake::target_t& target, int level)
 
     switch(target.type)
     {
-        case cmake::target_t::executable:
+        case cmake::config::target_t::executable:
             s << p << "type: executable\n";
             break;
-        case cmake::target_t::shared_library:
+        case cmake::config::target_t::shared_library:
             s << p << "type: shared library\n";
             break;
-        case cmake::target_t::static_library:
+        case cmake::config::target_t::static_library:
             s << p << "type: static library\n";
             break;
     }
@@ -101,7 +101,7 @@ std::string str(const cmake::target_t& target, int level)
     return s.str();
 }
 
-std::string str(const std::string& name, const cmake::directory_t& dir, int level)
+std::string str(const std::string& name, const cmake::config::directory_t& dir, int level)
 {
     std::stringstream s;
     std::string p(level, ' ');
@@ -134,7 +134,7 @@ std::string str(const std::string& name, const cmake::directory_t& dir, int leve
     return s.str();
 }
 
-std::string str(const cmake::configuration_t& config)
+std::string str(const cmake::config::configuration_t& config)
 {
     std::stringstream s;
     
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
         std::cout << "Created project '" << project_name << "'.\n";
         
         // testing only.
-        cmake::configuration_t config;
+        cmake::config::configuration_t config;
         config.name = project_name;
         config.packages.insert("Boost");
         config.packages.insert("X11");
@@ -183,10 +183,10 @@ int main(int argc, char* argv[])
         config.directory.files.push_back({"blah.cpp", {"-DBLEH", "-DFOO"}, "-Wall -Wextra"});
         config.directory.files.push_back({"b.cpp", {"-DBBLEH", "-DBFOO"}, "-Wall -Wextra"});
         
-        cmake::target_t foo;
+        cmake::config::target_t foo;
         foo.name = "foo";
         foo.label = "Foo executable";
-        foo.type = cmake::target_t::executable;
+        foo.type = cmake::config::target_t::executable;
         foo.version = {1, 2, 3};
         foo.sources = {"a.cpp", "b.cpp", "c.cpp"};
         foo.depends = {"foo"};
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
         config.directory.targets.push_back(foo);
         
         mkdir((std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name + "/src").c_str(), 0777);
-        config.directory.subdirectories.push_back({"src", cmake::directory_t()});
+        config.directory.subdirectories.push_back({"src", cmake::config::directory_t()});
         
         std::string written;
         {
@@ -209,13 +209,13 @@ int main(int argc, char* argv[])
             std::cout << written;
         }
         
-        cmake::write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
+        write(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name, config);
         
         //project.generate();
         
         {
             std::cout << std::string(40, '-') << "\n";
-            auto config = cmake::read(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name);
+            auto config = cmake::config::read(std::string("/home/nicholas/dev/build/cxxide/projects/") + project_name);
             std::string read;
             {
                 std::ostringstream s;

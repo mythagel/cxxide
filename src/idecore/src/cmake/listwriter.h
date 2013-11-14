@@ -32,6 +32,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 struct configuration_t;
 struct directory_t;
@@ -66,6 +68,7 @@ public:
     virtual ~list_rewriter_t() = default;
 };
 
+}
 }
 }
 

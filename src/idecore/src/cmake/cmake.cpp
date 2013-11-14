@@ -41,6 +41,8 @@ namespace cxxide
 {
 namespace cmake
 {
+namespace config
+{
 
 error::error(const std::string& what)
  : std::runtime_error(what)
@@ -339,6 +341,7 @@ configuration_t read(const fs::path& root_path)
     }
 }
 
+}
 }
 }
 
