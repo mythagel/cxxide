@@ -40,9 +40,216 @@ error::~error() noexcept
 {
 }
 
+file_t::file_t(config::configuration_t& configuration, config::directory_t& directory, config::file_t& file)
+ : configuration(std::ref(configuration)), directory(std::ref(directory)), file(std::ref(file))
+{
+}
+
+std::vector<std::string> file_t::definitions() const
+{
+    return file.get().definitions;
+}
+void file_t::definitions(const std::vector<std::string>& defs)
+{
+    file.get().definitions = defs;
+}
+
+std::string file_t::compile_flags() const
+{
+    return file.get().compile_flags;
+}
+void file_t::compile_flags(const std::string& flags)
+{
+    file.get().compile_flags = flags;
+}
+
+target_t::target_t(config::configuration_t& configuration, config::directory_t& directory, config::target_t& target)
+ : configuration(std::ref(configuration)), directory(std::ref(directory)), target(std::ref(target))
+{
+}
+
+
 directory_t::directory_t(config::configuration_t& configuration, config::directory_t& directory)
  : configuration(std::ref(configuration)), directory(std::ref(directory))
 {
+}
+
+std::vector<std::string> directory_t::definitions() const
+{
+    return directory.get().definitions;
+}
+void directory_t::definitions(const std::vector<std::string>& defs)
+{
+    directory.get().definitions = defs;
+}
+
+std::vector<std::string> directory_t::includes() const
+{
+    return directory.get().includes;
+}
+void directory_t::includes(const std::vector<std::string>& incls)
+{
+    directory.get().includes = incls;
+}
+
+std::string directory_t::compile_flags_cxx() const
+{
+    return directory.get().compile_flags.cxx;
+}
+std::string directory_t::compile_flags_c() const
+{
+    return directory.get().compile_flags.c;
+}
+void directory_t::compile_flags_cxx(const std::string& flags)
+{
+    directory.get().compile_flags.cxx = flags;
+}
+void directory_t::compile_flags_c(const std::string& flags)
+{
+    directory.get().compile_flags.c = flags;
+}
+
+std::vector<config::directory_t::configure_file_t> directory_t::configure_files() const
+{
+    return directory.get().configure_files;
+}
+void directory_t::configure_file_add(const std::string& input, const std::string& output)
+{
+    auto& configure_files = directory.get().configure_files;
+
+    for(auto& cf : configure_files)
+        if(cf.input == input) throw error("configure file exists");
+
+    configure_files.push_back({ input, output });
+}
+void directory_t::configure_file_remove(const std::string& input)
+{
+    auto& configure_files = directory.get().configure_files;
+    for(auto it = begin(configure_files); it != end(configure_files); )
+    {
+        if(it->input == input)
+            it = configure_files.erase(it);
+        else
+            ++it;
+    }
+}
+
+file_t directory_t::file_add(const std::string& name)
+{
+    auto& files = directory.get().files;
+
+    for(auto& file : files)
+        if(file.name == name) throw error("file exists");
+
+    files.emplace_back();
+    files.back().name = name;
+
+    return { configuration, directory, files.back() };
+}
+file_t directory_t::file_get(const std::string& name)
+{
+    auto& files = directory.get().files;
+
+    for(auto& file : files)
+        if(file.name == name) return { configuration, directory, file };
+
+    throw error("file not found");
+}
+std::vector<config::file_t> directory_t::files() const
+{
+    return directory.get().files;
+}
+void directory_t::file_remove(const std::string& name)
+{
+    auto& files = directory.get().files;
+    for(auto it = begin(files); it != end(files); )
+    {
+        if(it->name == name)
+            it = files.erase(it);
+        else
+            ++it;
+    }
+}
+
+bool target_exists(const std::string& name, const config::directory_t& directory)
+{
+    for(auto& target : directory.targets)
+        if(target.name == name) return true;
+
+    for(auto& dir : directory.subdirectories)
+        if(target_exists(name, dir.second)) return true;
+
+    return false;
+}
+bool target_exists(const std::string& name, const config::configuration_t& configuration)
+{
+    return target_exists(name, configuration.directory);
+}
+
+target_t directory_t::target_add(const std::string& name)
+{
+    auto& targets = directory.get().targets;
+    if(target_exists(name, configuration)) throw error("named target already exists");
+
+    targets.emplace_back();
+    targets.back().name = name;
+    
+    return { configuration, directory, targets.back() };
+}
+target_t directory_t::target_get(const std::string& name)
+{
+    auto& targets = directory.get().targets;
+
+    for(auto& target : targets)
+        if(target.name == name) return { configuration, directory, target };
+
+    throw error("target not found");
+}
+std::vector<config::target_t> directory_t::targets() const
+{
+    return directory.get().targets;
+}
+void directory_t::target_remove(const std::string& name)
+{
+    auto& targets = directory.get().targets;
+    for(auto it = begin(targets); it != end(targets); )
+    {
+        if(it->name == name)
+            it = targets.erase(it);
+        else
+            ++it;
+    }
+}
+
+std::vector<std::string> directory_t::subdirectories() const
+{
+    std::vector<std::string> ret;
+    for(auto& dir : directory.get().subdirectories)
+        ret.push_back(dir.first);
+    return ret;
+}
+
+directory_t directory_t::subdirectory(const fs::path& path)
+{
+    if(path.is_absolute())
+        throw std::logic_error("relative path required.");
+
+    auto cur = directory;
+    for(auto& dir : path)
+    {
+        auto it = find_if(begin(cur.get().subdirectories), end(cur.get().subdirectories),
+            [&dir](const std::pair<std::string, config::directory_t>& e) -> bool
+            {
+                return e.first == dir.native();
+            });
+
+        if(it == end(cur.get().subdirectories))
+            throw error(path.native() + " : Not found");
+
+        cur = std::ref(it->second);
+    }
+
+    return { configuration, cur };
 }
 
 std::string project_t::name() const
@@ -63,7 +270,7 @@ std::set<std::string> project_t::packages() const
     return configuration.packages;
 }
 
-directory_t project_t::directory(const boost::filesystem::path& path)
+directory_t project_t::directory(const fs::path& path)
 {
     if(path.is_absolute())
         throw std::logic_error("relative path required.");

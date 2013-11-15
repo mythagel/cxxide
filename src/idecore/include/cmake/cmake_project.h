@@ -49,6 +49,12 @@ private:
     std::reference_wrapper<config::file_t> file;
 public:
     file_t(config::configuration_t& configuration, config::directory_t& directory, config::file_t& file);
+    
+    std::vector<std::string> definitions() const;
+    void definitions(const std::vector<std::string>& defs);
+    
+    std::string compile_flags() const;
+    void compile_flags(const std::string& flags);
 };
 
 class target_t
@@ -86,17 +92,18 @@ public:
 
     file_t file_add(const std::string& name);
     file_t file_get(const std::string& name);
-    std::vector<file_t> files();
-    file_t file_remove(const std::string& name);
+    std::vector<config::file_t> files() const;
+    void file_remove(const std::string& name);
 
     target_t target_add(const std::string& name);
     target_t target_get(const std::string& name);
-    std::vector<target_t> targets();
-    target_t target_remove(const std::string& name);
+    std::vector<config::target_t> targets() const;
+    void target_remove(const std::string& name);
 
-    /* Retrieve the directory entry for the given canonical, relative path.
+    std::vector<std::string> subdirectories() const;
+    /* Retrieve the subdirectory entry for the given canonical, relative path.
      * It is an error to attempt to retrieve a path that does not exist. */
-    directory_t directory(const boost::filesystem::path& path);
+    directory_t subdirectory(const boost::filesystem::path& path);
 };
 
 class project_t
