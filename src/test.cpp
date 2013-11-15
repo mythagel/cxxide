@@ -9,7 +9,7 @@
 #include <iterator>
 
 using namespace cxxide;
-using namespace cxxide::cmake::config::detail;
+using namespace cxxide::cmake::config;
 
 void print_exception(const std::exception& e, int level = 0)
 {

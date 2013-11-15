@@ -30,7 +30,6 @@
 #include <stdexcept>
 #include <memory>
 #include <boost/filesystem.hpp>
-#include "../../src/cmake/priv.h"
 
 namespace cxxide
 {
@@ -50,35 +49,82 @@ struct error_unmanaged : error
     virtual ~error_unmanaged() noexcept;
 };
 
-//class directory
-//{
-//private:
-//    std::shared_ptr<detail::directory_t> dir;
-//public:
-//    directory();
-//    directory(std::shared_ptr<detail::directory_t> dir);
-//};
+struct target_t
+{
+    std::string name;
+    std::string label;
+    enum type_t
+    {
+        executable,
+        shared_library,
+        static_library
+    } type;
+    struct version_t
+    {
+        int major;
+        int minor;
+        int patch;
 
-//class configuration
-//{
-//private:
-//    std::shared_ptr<detail::configuration_t> config;
-//public:
-//    configuration();
-//    explicit configuration(std::shared_ptr<detail::configuration_t> config);
+        version_t();
+        version_t(int major, int minor, int patch);
 
-//    std::string name() const;
-//    bool managed() const;
+        bool empty() const;
+    } version;
+    std::vector<std::string> sources;
+    std::vector<std::string> depends;
+    std::vector<std::string> definitions;
+    std::vector<std::string> includes;
+    std::string compile_flags;
+    std::string link_flags;
+    std::vector<std::string> libs;
+    std::vector<std::string> packages;
 
-//    typedef std::set<std::string>::const_iterator package_iterator;
-//    void add_package(const std::string& name);
-//    void remove_package(const std::string& name);
-//    package_iterator package_begin() const;
-//    package_iterator package_end() const;
-//};
+    target_t();
+};
 
-void write(const boost::filesystem::path& root_path, const detail::configuration_t& config);
-detail::configuration_t read(const boost::filesystem::path& root_path);
+struct file_t
+{
+    std::string name;
+    std::vector<std::string> definitions;
+    std::string compile_flags;
+};
+
+struct directory_t
+{
+    std::vector<std::string> definitions;
+    std::vector<std::string> includes;
+    struct
+    {
+        std::string cxx;
+        std::string c;
+    } compile_flags;
+
+    struct configure_file_t
+    {
+        std::string input;
+        std::string output;
+    };
+    std::vector<configure_file_t> configure_files;
+
+    std::vector<file_t> files;
+    std::vector<target_t> targets;
+
+    std::vector<std::pair<std::string, directory_t>> subdirectories;
+};
+
+struct configuration_t
+{
+    std::string name;
+    bool managed;
+
+    std::set<std::string> packages;
+    directory_t directory;
+
+    configuration_t();
+};
+
+void write(const boost::filesystem::path& root_path, const configuration_t& config);
+configuration_t read(const boost::filesystem::path& root_path);
 
 }
 }

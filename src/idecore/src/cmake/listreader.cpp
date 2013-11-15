@@ -24,7 +24,6 @@
 
 #include "listreader.h"
 #include "cmake/cmake.h"
-#include "priv.h"
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -34,11 +33,6 @@ namespace cmake
 {
 namespace config
 {
-
-using detail::target_t;
-using detail::file_t;
-using detail::directory_t;
-using detail::configuration_t;
 
 list_reader_t::command_t::command_t()
  : type(UNKNOWN)
