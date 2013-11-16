@@ -32,6 +32,26 @@ namespace cxxide
 namespace cmake
 {
 
+namespace
+{
+
+bool target_exists(const std::string& name, const config::directory_t& directory)
+{
+    for(auto& target : directory.targets)
+        if(target.name == name) return true;
+
+    for(auto& dir : directory.subdirectories)
+        if(target_exists(name, dir.second)) return true;
+
+    return false;
+}
+bool target_exists(const std::string& name, const config::configuration_t& configuration)
+{
+    return target_exists(name, configuration.directory);
+}
+
+}
+
 error::error(const std::string& what)
  : std::runtime_error(what)
 {
@@ -68,6 +88,115 @@ target_t::target_t(config::configuration_t& configuration, config::directory_t& 
 {
 }
 
+std::string target_t::name() const
+{
+    return target.get().name;
+}
+void target_t::name(const std::string& name) const
+{
+    if(target_exists(name, configuration)) throw error("named target already exists");
+
+    target.get().name = name;
+}
+
+std::string target_t::label() const
+{
+    return target.get().label;
+}
+void target_t::label(const std::string& label)
+{
+    target.get().label = label;
+}
+
+config::target_t::type_t target_t::type() const
+{
+    return target.get().type;
+}
+void target_t::type(config::target_t::type_t type)
+{
+    target.get().type = type;
+}
+
+config::target_t::version_t target_t::version() const
+{
+    return target.get().version;
+}
+void target_t::version(const config::target_t::version_t& version)
+{
+    target.get().version = version;
+}
+
+std::vector<std::string> target_t::sources() const
+{
+    return target.get().sources;
+}
+void target_t::sources(const std::vector<std::string>& sources)
+{
+    target.get().sources = sources;
+}
+
+std::vector<std::string> target_t::depends() const
+{
+    return target.get().depends;
+}
+void target_t::depends(const std::vector<std::string>& depends)
+{
+    target.get().depends = depends;
+}
+
+std::vector<std::string> target_t::definitions() const
+{
+    return target.get().definitions;
+}
+void target_t::definitions(const std::vector<std::string>& definitions)
+{
+    target.get().definitions = definitions;
+}
+
+std::vector<std::string> target_t::includes() const
+{
+    return target.get().includes;
+}
+void target_t::includes(const std::vector<std::string>& includes)
+{
+    target.get().includes = includes;
+}
+
+std::string target_t::compile_flags() const
+{
+    return target.get().compile_flags;
+}
+void target_t::compile_flags(const std::string& flags)
+{
+    target.get().compile_flags = flags;
+}
+
+std::string target_t::link_flags() const
+{
+    return target.get().link_flags;
+}
+void target_t::link_flags(const std::string& flags)
+{
+    target.get().link_flags = flags;
+}
+
+std::vector<std::string> target_t::libs() const
+{
+    return target.get().libs;
+}
+void target_t::libs(const std::vector<std::string>& libs)
+{
+    target.get().libs = libs;
+}
+
+std::vector<std::string> target_t::packages() const
+{
+    return target.get().packages;
+}
+void target_t::packages(const std::vector<std::string>& packages)
+{
+    target.get().packages = packages;
+}
 
 directory_t::directory_t(config::configuration_t& configuration, config::directory_t& directory)
  : configuration(std::ref(configuration)), directory(std::ref(directory))
@@ -169,21 +298,6 @@ void directory_t::file_remove(const std::string& name)
         else
             ++it;
     }
-}
-
-bool target_exists(const std::string& name, const config::directory_t& directory)
-{
-    for(auto& target : directory.targets)
-        if(target.name == name) return true;
-
-    for(auto& dir : directory.subdirectories)
-        if(target_exists(name, dir.second)) return true;
-
-    return false;
-}
-bool target_exists(const std::string& name, const config::configuration_t& configuration)
-{
-    return target_exists(name, configuration.directory);
 }
 
 target_t directory_t::target_add(const std::string& name)

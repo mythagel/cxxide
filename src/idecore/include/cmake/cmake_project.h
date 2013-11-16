@@ -65,6 +65,33 @@ private:
     std::reference_wrapper<config::target_t> target;
 public:
     target_t(config::configuration_t& configuration, config::directory_t& directory, config::target_t& target);
+
+    std::string name() const;
+    // Note renaming a target can fail.
+    void name(const std::string& name) const;
+
+    std::string label() const;
+    void label(const std::string& label);
+    config::target_t::type_t type() const;
+    void type(config::target_t::type_t type);
+    config::target_t::version_t version() const;
+    void version(const config::target_t::version_t& version);
+    std::vector<std::string> sources() const;
+    void sources(const std::vector<std::string>& sources);
+    std::vector<std::string> depends() const;
+    void depends(const std::vector<std::string>& depends);
+    std::vector<std::string> definitions() const;
+    void definitions(const std::vector<std::string>& definitions);
+    std::vector<std::string> includes() const;
+    void includes(const std::vector<std::string>& includes);
+    std::string compile_flags() const;
+    void compile_flags(const std::string& flags);
+    std::string link_flags() const;
+    void link_flags(const std::string& flags);
+    std::vector<std::string> libs() const;
+    void libs(const std::vector<std::string>& libs);
+    std::vector<std::string> packages() const;
+    void packages(const std::vector<std::string>& packages);
 };
 
 class directory_t
