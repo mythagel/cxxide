@@ -398,9 +398,8 @@ directory_t project_t::directory_create(const fs::path& path)
     // TODO need to make the path relative to the source root_path.
     if(path.is_absolute())
     {
-        auto source_mag = std::distance(begin(source_path), end(source_path));
-        auto path_mag = std::distance(begin(path), end(path));
-        if(source_mag > path_mag) throw std::logic_error("relative path required.");
+        if(!is_child_of(source_path, path))
+            throw std::logic_error("path not child of project source");
     }
     try
     {
