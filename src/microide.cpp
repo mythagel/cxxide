@@ -209,17 +209,9 @@ int dir_create(int argc, char* argv[])
 
     auto project = project::open(path, build_path);
 
-    /* BIIIG TODO.
-     * What is the interface for modifing the configuration?
-     * ATM the cmake::configuration_t structure is hidden behind:
-     * cmake::project_t
-     * project::project_t
-     * i.e. The idecore project contains a cmake project which contains a configuration
-     * that i want to modify under three levels of nesting.
-     * NOT a good idea to expose the raw structure - some consistency is required to be maintained.
-     * probably better to implement code level functions to modify the structure. */
+    project.directory_create(path / name);
+    project.write_config();
 
-    throw std::logic_error("Unimplemented.");
     return 0;
 }
 

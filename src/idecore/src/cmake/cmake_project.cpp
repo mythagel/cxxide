@@ -50,6 +50,15 @@ bool target_exists(const std::string& name, const config::configuration_t& confi
     return target_exists(name, configuration.directory);
 }
 
+bool is_child_of(fs::path path, fs::path child)
+{
+    auto path_mag = std::distance(begin(path), end(path));
+    auto child_mag = std::distance(begin(child), end(child));
+    if(path_mag > child_mag) return false;
+
+    return std::equal(begin(path), end(path), begin(child));
+}
+
 }
 
 error::error(const std::string& what)
@@ -386,8 +395,13 @@ std::set<std::string> project_t::packages() const
 
 directory_t project_t::directory_create(const fs::path& path)
 {
+    // TODO need to make the path relative to the source root_path.
     if(path.is_absolute())
-        throw std::logic_error("relative path required.");
+    {
+        auto source_mag = std::distance(begin(source_path), end(source_path));
+        auto path_mag = std::distance(begin(path), end(path));
+        if(source_mag > path_mag) throw std::logic_error("relative path required.");
+    }
     try
     {
         // Create the filesystem paths

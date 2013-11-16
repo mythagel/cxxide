@@ -60,8 +60,37 @@ public:
 //    branch();
 //    merge();
 //    
-//    // build
+    bool managed() const;
+
+    void packages(const std::set<std::string>& pkgs);
+    std::set<std::string> packages() const;
+
+    /* Create and return a new canonical, relative path.
+     * Nested paths can be created with this function.
+     * Note that the configuration will need to be written after this operation */
+    cmake::directory_t directory_create(const boost::filesystem::path& path);
+
+    /* Retrieve the directory entry for the given canonical, relative path.
+     * It is an error to attempt to retrieve a path that does not exist. */
+    cmake::directory_t directory(const boost::filesystem::path& path = {});
+
+    /* Read the configuration from disc.
+     * Discards any unwritten changes. */
+    void read_config();
+
+    /* Write the in memory configuration to disc.
+     * Only the managed sections are rewritten, all user configuration is maintained
+     * May throw on errors or if the configuration is unmanaged.*/
+    void write_config();
+
+    /* Generate the cmake configuration.
+     * Generally only needed when configuring a new build path.
+     * TODO progress report & output. */
     void generate();
+
+    /* Execute the build tool through cmake.
+     * Very basic interface. It is expected that higher layers
+     * will take finer control over the build process. */
     void build();
 //    
 //    // code insight

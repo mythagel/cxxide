@@ -46,6 +46,40 @@ std::string project_t::name() const
     return config.name();
 }
 
+bool project_t::managed() const
+{
+    return config.managed();
+}
+
+void project_t::packages(const std::set<std::string>& pkgs)
+{
+    config.packages(pkgs);
+}
+std::set<std::string> project_t::packages() const
+{
+    return config.packages();
+}
+
+cmake::directory_t project_t::directory_create(const fs::path& path)
+{
+    return config.directory_create(path);
+}
+
+cmake::directory_t project_t::directory(const fs::path& path)
+{
+    return config.directory(path);
+}
+
+void project_t::read_config()
+{
+    config.read();
+}
+
+void project_t::write_config()
+{
+    config.write();
+}
+
 void project_t::generate()
 {
     config.generate();
