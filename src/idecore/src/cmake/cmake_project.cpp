@@ -270,6 +270,45 @@ std::set<std::string> project_t::packages() const
     return configuration.packages;
 }
 
+directory_t project_t::directory_create(const fs::path& path)
+{
+    if(path.is_absolute())
+        throw std::logic_error("relative path required.");
+    try
+    {
+        // Create the filesystem paths
+        auto full_path = source_path / path;
+        create_directories(full_path);
+
+        // Create the entries in the configuration.
+        auto cur = std::ref(configuration.directory);
+        for(auto& dir : path)
+        {
+            auto it = find_if(begin(cur.get().subdirectories), end(cur.get().subdirectories),
+                [&dir](const std::pair<std::string, config::directory_t>& e) -> bool
+                {
+                    return e.first == dir.native();
+                });
+
+            if(it == end(cur.get().subdirectories))
+            {
+                cur.get().subdirectories.emplace_back(dir.native(), config::directory_t());
+                cur = std::ref(cur.get().subdirectories.back().second);
+            }
+            else
+            {
+                cur = std::ref(it->second);
+            }
+        }
+
+        return { configuration, cur };
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("cmake::write failed"));
+    }
+}
+
 directory_t project_t::directory(const fs::path& path)
 {
     if(path.is_absolute())

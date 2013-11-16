@@ -124,6 +124,11 @@ public:
     void packages(const std::set<std::string>& pkgs);
     std::set<std::string> packages() const;
 
+    /* Create and return a new canonical, relative path.
+     * Nested paths can be created with this function.
+     * Note that the configuration will need to be written after this operation */
+    directory_t directory_create(const boost::filesystem::path& path);
+
     /* Retrieve the directory entry for the given canonical, relative path.
      * It is an error to attempt to retrieve a path that does not exist. */
     directory_t directory(const boost::filesystem::path& path = {});
