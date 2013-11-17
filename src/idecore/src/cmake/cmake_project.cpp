@@ -24,6 +24,8 @@
 
 #include "cmake/cmake_project.h"
 #include "system/exec.h"
+#include <iterator>
+#include <algorithm>
 
 namespace fs = boost::filesystem;
 
@@ -50,13 +52,33 @@ bool target_exists(const std::string& name, const config::configuration_t& confi
     return target_exists(name, configuration.directory);
 }
 
-bool is_child_of(fs::path path, fs::path child)
+bool is_child_of(const fs::path& child, const fs::path& path)
 {
+    using std::begin;
+    using std::end;
     auto path_mag = std::distance(begin(path), end(path));
     auto child_mag = std::distance(begin(child), end(child));
     if(path_mag > child_mag) return false;
 
     return std::equal(begin(path), end(path), begin(child));
+}
+
+fs::path relative_child_of(fs::path path, const fs::path& source_path)
+{
+    using std::begin;
+    using std::end;
+    if(path.is_absolute())
+    {
+        if(!is_child_of(path, source_path))
+            throw std::logic_error("path not child of source path");
+        
+        fs::path p;
+        for(auto it = std::mismatch(begin(source_path), end(source_path), begin(path)).second; it != end(path); ++it)
+            p /= *it;
+        path = p;
+    }
+    
+    return path;
 }
 
 }
@@ -393,14 +415,10 @@ std::set<std::string> project_t::packages() const
     return configuration.packages;
 }
 
-directory_t project_t::directory_create(const fs::path& path)
+directory_t project_t::directory_create(fs::path path)
 {
-    // TODO need to make the path relative to the source root_path.
-    if(path.is_absolute())
-    {
-        if(!is_child_of(source_path, path))
-            throw std::logic_error("path not child of project source");
-    }
+    path = relative_child_of(path, source_path);
+
     try
     {
         // Create the filesystem paths
@@ -436,10 +454,9 @@ directory_t project_t::directory_create(const fs::path& path)
     }
 }
 
-directory_t project_t::directory(const fs::path& path)
+directory_t project_t::directory(fs::path path)
 {
-    if(path.is_absolute())
-        throw std::logic_error("relative path required.");
+    path = relative_child_of(path, source_path);
 
     auto cur = std::ref(configuration.directory);
     for(auto& dir : path)
