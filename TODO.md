@@ -9,9 +9,6 @@ build CLI versions of the cmake, source, & index libs
  - will allow testing of the libs in a greater context.
  - can start to self host even without the gui.
 
-Cmake project init / open complete
- * Need to revisit serialisation of targets - should be one target per section so they can be made conditional.
-
 Need to implement source manager
  * Creates source file(s) from templates
  * Manages licensing
