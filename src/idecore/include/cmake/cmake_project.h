@@ -122,7 +122,7 @@ public:
     std::vector<config::file_t> files() const;
     void file_remove(const std::string& name);
 
-    target_t target_add(const std::string& name);
+    target_t target_add(const std::string& name, config::target_t::type_t type);
     target_t target_get(const std::string& name);
     std::vector<config::target_t> targets() const;
     void target_remove(const std::string& name);

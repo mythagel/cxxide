@@ -331,13 +331,14 @@ void directory_t::file_remove(const std::string& name)
     }
 }
 
-target_t directory_t::target_add(const std::string& name)
+target_t directory_t::target_add(const std::string& name, config::target_t::type_t type)
 {
     auto& targets = directory.get().targets;
-    if(target_exists(name, configuration)) throw error("named target already exists");
+    if(target_exists(name, configuration)) throw error("target already exists");
 
     targets.emplace_back();
     targets.back().name = name;
+    targets.back().type = type;
     
     return { configuration, directory, targets.back() };
 }
