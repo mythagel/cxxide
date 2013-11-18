@@ -12,21 +12,10 @@ using namespace cxxide;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-void print_exception(const std::exception& e, int level = 0)
-{
-    std::cerr << std::string(level, ' ') << "error: " << e.what() << '\n';
-    try
-    {
-        std::rethrow_if_nested(e);
-    }
-    catch(const std::exception& e)
-    {
-        print_exception(e, level+1);
-    }
-    catch(...)
-    {
-    }
-}
+po::options_description common_options("Global options");
+po::options_description user_options("microide options");
+
+void print_exception(const std::exception& e, int level = 0);
 
 /*
 Interface
@@ -49,16 +38,42 @@ source create tu blah [--lang c++/c]
 
 */
 
-typedef int command_t(int argc, char* argv[]);
+typedef int command_t(const std::vector<std::string>& args);
 
-int create(int argc, char* argv[]);
-int dir_create(int argc, char* argv[]);
+int create(const std::vector<std::string>& args);
+int create_dir(const std::vector<std::string>& args);
+int create_target(const std::vector<std::string>& args);
 
-po::options_description common_options("Global options");
-po::options_description user_options("microide options");
+struct subcommand
+{
+    std::string name;
+    std::string description;
+    command_t* command;
+
+    std::vector<subcommand> subcommands;
+};
+
+std::ostream& operator<<(std::ostream& os, const subcommand& cmd);
+
 
 int main(int argc, char* argv[])
 {
+    std::vector<std::string> args(argv, argv + argc);
+
+    subcommand root;
+    root.name = args[0];
+    root.command = nullptr;
+    root.subcommands =
+    {
+        {"create", "Create a new project", create,
+            {
+                {"dir", "Create a new source directory", create_dir, {}},
+                {"target", "Create a new target", create_target, {}}
+            }
+        }
+    };
+    args.erase(begin(args));
+
     try
     {
         common_options.add_options()
@@ -69,51 +84,57 @@ int main(int argc, char* argv[])
 
         po::options_description hidden;
         hidden.add_options()
-            ("command", po::value<std::string>()->required(), "Command to execute")
-            ("command_args", po::value<std::vector<std::string>>(), "Command arguments")
+            ("commands", po::value<std::vector<std::string>>()->required(), "Command to execute")
         ;
 
         user_options.add(common_options);
 
         po::positional_options_description p;
-        p.add("command", 1);
-        p.add("command_args", -1);
+        p.add("commands", -1);
         po::options_description desc;
         desc.add(common_options).add(hidden);
 
         po::variables_map vm;
-        store(po::command_line_parser(argc, argv).positional(p).options(desc).allow_unregistered().run(), vm);
+        store(po::command_line_parser(args).positional(p).options(desc).allow_unregistered().run(), vm);
 
-        if (vm.count("help") && !vm.count("command"))
+        if (vm.count("help") && !vm.count("commands"))
         {
             std::cout << user_options << "\n";
+            std::cout << "\nCommands: \n" << root << "\n";
             return 0;
         }
         notify(vm);
 
-        if (!vm.count("help") && !vm.count("command"))
         {
+            subcommand* command = &root;
+
+            for(auto it = begin(args); it != end(args); )
+            {
+                if(it->find('-') == 0)
+                    break;
+
+                bool command_found = false;
+                for(auto& cmd : command->subcommands)
+                {
+                    if(cmd.name == *it)
+                    {
+                        command = &cmd;
+                        command_found = true;
+                        break;
+                    }
+                }
+                if(command_found)
+                    it = args.erase(it);
+                else
+                    break;
+            }
+
+            if(command != &root && command->command)
+                return command->command(args);
+
+            std::cout << "error: Unrecognised command.\n";
             std::cout << user_options << "\n";
-            return 1;
-        }
-
-        auto cmd = vm["command"].as<std::string>();
-
-        std::map<std::string, command_t*> commands =
-        {
-            {"create", create},
-            {"create-dir", dir_create}
-        };
-
-        auto command = commands.find(cmd);
-        if(command != commands.end())
-        {
-            return command->second(argc, argv);
-        }
-        else
-        {
-            std::cerr << "Unrecognised command " << cmd << "\n";
-            std::cout << user_options << "\n";
+            std::cout << "\nCommands: \n" << root << "\n";
             return 1;
         }
     }
@@ -121,6 +142,7 @@ int main(int argc, char* argv[])
     {
         print_exception(e);
         std::cout << user_options << "\n";
+        std::cout << "\nCommands: \n" << root << "\n";
         return 1;
     }
     catch(const std::exception& e)
@@ -130,28 +152,22 @@ int main(int argc, char* argv[])
     }
 }
 
-int create(int argc, char* argv[])
+int create(const std::vector<std::string>& args)
 {
-    po::options_description command_options("Create options");
+    po::options_description command_options("Create project options");
     command_options.add_options()
         ("name", po::value<std::string>()->required(), "Project name")
-    ;
-
-    po::options_description hidden;
-    hidden.add_options()
-        ("command", po::value<std::string>()->required(), "Command to execute")
     ;
 
     user_options.add(command_options);
 
     po::positional_options_description p;
-    p.add("command", 1);
     p.add("name", 1);
     po::options_description desc;
-    desc.add(common_options).add(command_options).add(hidden);
+    desc.add(common_options).add(command_options);
 
     po::variables_map vm;
-    store(po::command_line_parser(argc, argv). positional(p).options(desc).run(), vm);
+    store(po::command_line_parser(args). positional(p).options(desc).run(), vm);
 
     if(vm.count("help"))
     {
@@ -171,28 +187,22 @@ int create(int argc, char* argv[])
     return 0;
 }
 
-int dir_create(int argc, char* argv[])
+int create_dir(const std::vector<std::string>& args)
 {
-    po::options_description command_options("Directory options");
+    po::options_description command_options("Create directory options");
     command_options.add_options()
         ("name", po::value<std::string>()->required(), "Directory name")
-    ;
-
-    po::options_description hidden;
-    hidden.add_options()
-        ("command", po::value<std::string>()->required(), "Command to execute")
     ;
 
     user_options.add(command_options);
 
     po::positional_options_description p;
-    p.add("command", 1);
     p.add("name", 1);
     po::options_description desc;
-    desc.add(common_options).add(command_options).add(hidden);
+    desc.add(common_options).add(command_options);
 
     po::variables_map vm;
-    store(po::command_line_parser(argc, argv). positional(p).options(desc).run(), vm);
+    store(po::command_line_parser(args). positional(p).options(desc).run(), vm);
 
     if (vm.count("help"))
     {
@@ -215,3 +225,99 @@ int dir_create(int argc, char* argv[])
     return 0;
 }
 
+int create_target(const std::vector<std::string>& args)
+{
+    po::options_description command_options("Create target options");
+    command_options.add_options()
+        ("name", po::value<std::string>()->required(), "Target name")
+        ("type", po::value<std::string>()->required(), "Target type")
+    ;
+
+    user_options.add(command_options);
+
+    po::positional_options_description p;
+    p.add("name", 1);
+    po::options_description desc;
+    desc.add(common_options).add(command_options);
+
+    po::variables_map vm;
+    store(po::command_line_parser(args). positional(p).options(desc).run(), vm);
+
+    if (vm.count("help"))
+    {
+        std::cout << user_options << "\n";
+        return 0;
+    }
+    notify(vm);
+
+    fs::path path = vm["path"].as<std::string>();
+    fs::path build_path;
+    if(vm.count("build-path"))
+        build_path = vm["build-path"].as<std::string>();
+    auto name = vm["name"].as<std::string>();
+    auto type = [](const std::string& token) -> cmake::config::target_t::type_t
+    {
+        if(token == "executable")
+            return cmake::config::target_t::executable;
+        else if(token == "shared_library")
+            return cmake::config::target_t::shared_library;
+        else if(token == "static_library")
+            return cmake::config::target_t::static_library;
+
+        throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
+    }(vm["type"].as<std::string>());
+
+    auto project = project::open(path, build_path);
+
+    auto source_dir = project.directory(path);
+    source_dir.target_add(name, type);
+    project.write_config();
+
+    return 0;
+}
+
+void print_exception(const std::exception& e, int level)
+{
+    std::cerr << std::string(level, ' ') << "error: " << e.what() << '\n';
+    try
+    {
+        std::rethrow_if_nested(e);
+    }
+    catch(const std::exception& e)
+    {
+        print_exception(e, level+1);
+    }
+    catch(...)
+    {
+    }
+}
+
+namespace
+{
+
+void out_nested(std::ostream& os, const subcommand& cmd, size_t n)
+{
+    std::string indent;
+    for(size_t i = 0; i < n; ++i)
+        indent += "  ";
+    if(!cmd.description.empty())
+        os << indent << cmd.name << "\t: \t\t" << cmd.description << "\n";
+    else
+        os << indent << cmd.name << "\n";
+    if(!cmd.command)
+        os << indent << std::string(cmd.name.size(), '-') << "\n";
+    for(auto& sc : cmd.subcommands)
+    {
+        os << indent;
+        out_nested(os, sc, n+1);
+        os << "\n";
+    }
+}
+
+}
+
+std::ostream& operator<<(std::ostream& os, const subcommand& cmd)
+{
+    out_nested(os, cmd, 0);
+    return os;
+}
