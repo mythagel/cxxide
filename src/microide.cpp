@@ -40,9 +40,13 @@ source create tu blah [--lang c++/c]
 
 typedef int command_t(const std::vector<std::string>& args);
 
+namespace commands
+{
 int create(const std::vector<std::string>& args);
 int create_dir(const std::vector<std::string>& args);
 int create_target(const std::vector<std::string>& args);
+
+}
 
 struct subcommand
 {
@@ -65,10 +69,10 @@ int main(int argc, char* argv[])
     root.command = nullptr;
     root.subcommands =
     {
-        {"create", "Create a new project", create,
+        {"create", "Create a new project", commands::create,
             {
-                {"dir", "Create a new source directory", create_dir, {}},
-                {"target", "Create a new target", create_target, {}}
+                {"dir", "Create a new source directory", commands::create_dir, {}},
+                {"target", "Create a new target", commands::create_target, {}}
             }
         }
     };
@@ -151,6 +155,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 }
+
+namespace commands
+{
 
 int create(const std::vector<std::string>& args)
 {
@@ -274,6 +281,8 @@ int create_target(const std::vector<std::string>& args)
     project.write_config();
 
     return 0;
+}
+
 }
 
 void print_exception(const std::exception& e, int level)
