@@ -174,6 +174,18 @@ void target_t::sources(const std::vector<std::string>& sources)
 {
     target.get().sources = sources;
 }
+void target_t::source_add(const std::string& source)
+{
+    auto& sources = target.get().sources;
+    if(std::count(begin(sources), end(sources), source))
+        throw error("source exists");
+    sources.push_back(source);
+}
+void target_t::source_remove(const std::string& source)
+{
+    auto& sources = target.get().sources;
+    sources.erase(std::remove(begin(sources), end(sources), source), end(sources));
+}
 
 std::vector<std::string> target_t::depends() const
 {
@@ -182,6 +194,18 @@ std::vector<std::string> target_t::depends() const
 void target_t::depends(const std::vector<std::string>& depends)
 {
     target.get().depends = depends;
+}
+void target_t::depend_add(const std::string& depend)
+{
+    auto& depends = target.get().depends;
+    if(std::count(begin(depends), end(depends), depend))
+        throw error("depend exists");
+    depends.push_back(depend);
+}
+void target_t::depend_remove(const std::string& depend)
+{
+    auto& depends = target.get().depends;
+    depends.erase(std::remove(begin(depends), end(depends), depend), end(depends));
 }
 
 std::vector<std::string> target_t::definitions() const
@@ -192,6 +216,18 @@ void target_t::definitions(const std::vector<std::string>& definitions)
 {
     target.get().definitions = definitions;
 }
+void target_t::definition_add(const std::string& define)
+{
+    auto& definitions = target.get().definitions;
+    if(std::count(begin(definitions), end(definitions), define))
+        throw error("define exists");
+    definitions.push_back(define);
+}
+void target_t::definition_remove(const std::string& define)
+{
+    auto& definitions = target.get().definitions;
+    definitions.erase(std::remove(begin(definitions), end(definitions), define), end(definitions));
+}
 
 std::vector<std::string> target_t::includes() const
 {
@@ -200,6 +236,18 @@ std::vector<std::string> target_t::includes() const
 void target_t::includes(const std::vector<std::string>& includes)
 {
     target.get().includes = includes;
+}
+void target_t::include_add(const std::string& include)
+{
+    auto& includes = target.get().includes;
+    if(std::count(begin(includes), end(includes), include))
+        throw error("include exists");
+    includes.push_back(include);
+}
+void target_t::include_remove(const std::string& include)
+{
+    auto& includes = target.get().includes;
+    includes.erase(std::remove(begin(includes), end(includes), include), end(includes));
 }
 
 std::string target_t::compile_flags() const
@@ -228,6 +276,18 @@ void target_t::libs(const std::vector<std::string>& libs)
 {
     target.get().libs = libs;
 }
+void target_t::lib_add(const std::string& lib)
+{
+    auto& libs = target.get().libs;
+    if(std::count(begin(libs), end(libs), lib))
+        throw error("lib exists");
+    libs.push_back(lib);
+}
+void target_t::lib_remove(const std::string& lib)
+{
+    auto& libs = target.get().libs;
+    libs.erase(std::remove(begin(libs), end(libs), lib), end(libs));
+}
 
 std::vector<std::string> target_t::packages() const
 {
@@ -236,6 +296,18 @@ std::vector<std::string> target_t::packages() const
 void target_t::packages(const std::vector<std::string>& packages)
 {
     target.get().packages = packages;
+}
+void target_t::package_add(const std::string& package)
+{
+    auto& packages = target.get().packages;
+    if(std::count(begin(packages), end(packages), package))
+        throw error("package exists");
+    packages.push_back(package);
+}
+void target_t::package_remove(const std::string& package)
+{
+    auto& packages = target.get().packages;
+    packages.erase(std::remove(begin(packages), end(packages), package), end(packages));
 }
 
 directory_t::directory_t(config::configuration_t& configuration, config::directory_t& directory)

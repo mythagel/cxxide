@@ -78,22 +78,41 @@ public:
     void type(config::target_t::type_t type);
     config::target_t::version_t version() const;
     void version(const config::target_t::version_t& version);
+
     std::vector<std::string> sources() const;
     void sources(const std::vector<std::string>& sources);
+    void source_add(const std::string& source);
+    void source_remove(const std::string& source);
+
     std::vector<std::string> depends() const;
     void depends(const std::vector<std::string>& depends);
+    void depend_add(const std::string& depend);
+    void depend_remove(const std::string& depend);
+
     std::vector<std::string> definitions() const;
     void definitions(const std::vector<std::string>& definitions);
+    void definition_add(const std::string& define);
+    void definition_remove(const std::string& define);
+
     std::vector<std::string> includes() const;
     void includes(const std::vector<std::string>& includes);
+    void include_add(const std::string& include);
+    void include_remove(const std::string& include);
+
     std::string compile_flags() const;
     void compile_flags(const std::string& flags);
     std::string link_flags() const;
     void link_flags(const std::string& flags);
+
     std::vector<std::string> libs() const;
     void libs(const std::vector<std::string>& libs);
+    void lib_add(const std::string& lib);
+    void lib_remove(const std::string& lib);
+
     std::vector<std::string> packages() const;
     void packages(const std::vector<std::string>& packages);
+    void package_add(const std::string& package);
+    void package_remove(const std::string& package);
 };
 
 class directory_t
