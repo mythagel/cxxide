@@ -191,13 +191,6 @@ void write_target(std::ostream& os, const target_t& target)
             os << lib << " ";
         os << ")\n";
     }
-    if(!target.depends.empty())
-    {
-        os << "ADD_DEPENDENCIES( " << target.name << " ";
-        for(auto& dep : target.depends)
-            os << dep << " ";
-        os << ")\n";
-    }
 }
 
 }

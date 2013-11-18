@@ -187,27 +187,6 @@ void target_t::source_remove(const std::string& source)
     sources.erase(std::remove(begin(sources), end(sources), source), end(sources));
 }
 
-std::vector<std::string> target_t::depends() const
-{
-    return target.get().depends;
-}
-void target_t::depends(const std::vector<std::string>& depends)
-{
-    target.get().depends = depends;
-}
-void target_t::depend_add(const std::string& depend)
-{
-    auto& depends = target.get().depends;
-    if(std::count(begin(depends), end(depends), depend))
-        throw error("depend exists");
-    depends.push_back(depend);
-}
-void target_t::depend_remove(const std::string& depend)
-{
-    auto& depends = target.get().depends;
-    depends.erase(std::remove(begin(depends), end(depends), depend), end(depends));
-}
-
 std::vector<std::string> target_t::definitions() const
 {
     return target.get().definitions;

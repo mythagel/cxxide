@@ -68,8 +68,6 @@ list_reader_t::command_t::command_t(std::string cmd_name)
         type = SET_TARGET_PACKAGES;
     else if(cmd_name == "SET_TARGET_LIBRARIES")
         type = SET_TARGET_LIBRARIES;
-    else if(cmd_name == "ADD_DEPENDENCIES")
-        type = ADD_DEPENDENCIES;
 }
 
 list_reader_t::list_reader_t(configuration_t* config, directory_t* directory)
@@ -497,19 +495,6 @@ void list_reader_t::end_command()
 
                     for(size_t i = 3; i < command.args.size(); ++i)
                         target->libs.push_back(command.args[i]);
-                    break;
-                }
-                case command_t::ADD_DEPENDENCIES:
-                {
-                    if(command.args.size() < 2)
-                        throw error("Unexpected arguments to ADD_DEPENDENCIES command in Target Properties");
-                    
-                    auto target_name = command.args[0];
-                    
-                    auto target = target_nx(target_name);
-                    
-                    for(size_t i = 1; i < command.args.size(); ++i)
-                        target->depends.push_back(command.args[i]);
                     break;
                 }
                 default:

@@ -69,8 +69,7 @@ private:
             ADD_EXECUTABLE,
             ADD_LIBRARY,
             SET_TARGET_PACKAGES,
-            SET_TARGET_LIBRARIES,
-            ADD_DEPENDENCIES
+            SET_TARGET_LIBRARIES
         } type;
         std::string name;
         std::vector<std::string> args;

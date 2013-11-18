@@ -72,7 +72,6 @@ struct target_t
         bool empty() const;
     } version;
     std::vector<std::string> sources;
-    std::vector<std::string> depends;
     std::vector<std::string> definitions;
     std::vector<std::string> includes;
     std::string compile_flags;

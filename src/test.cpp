@@ -62,13 +62,6 @@ std::string str(const target_t& target, int level)
         s << "\n";
     }
     
-    if(!target.depends.empty())
-    {
-        s << p << "depends: ";
-        std::copy(begin(target.depends), end(target.depends), std::ostream_iterator<std::string>(s, ", "));
-        s << "\n";
-    }
-    
     if(!target.definitions.empty())
     {
         s << p << "definitions: ";
@@ -194,7 +187,6 @@ int main(int argc, char* argv[])
         foo.type = target_t::executable;
         foo.version = {1, 2, 3};
         foo.sources = {"a.cpp", "b.cpp", "c.cpp"};
-        foo.depends = {"foo"};
         foo.definitions = {"-DFOOFOO", "-DFOOBAR"};
         foo.includes = {"foo", "/usr/include/foo/"};
         foo.compile_flags = "-Wno-unused-parameters";

@@ -84,11 +84,6 @@ public:
     void source_add(const std::string& source);
     void source_remove(const std::string& source);
 
-    std::vector<std::string> depends() const;
-    void depends(const std::vector<std::string>& depends);
-    void depend_add(const std::string& depend);
-    void depend_remove(const std::string& depend);
-
     std::vector<std::string> definitions() const;
     void definitions(const std::vector<std::string>& definitions);
     void definition_add(const std::string& define);
