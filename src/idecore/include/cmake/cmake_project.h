@@ -72,6 +72,8 @@ public:
 
     std::string label() const;
     void label(const std::string& label);
+    std::string output_name() const;
+    void output_name(const std::string& name);
     config::target_t::type_t type() const;
     void type(config::target_t::type_t type);
     config::target_t::version_t version() const;

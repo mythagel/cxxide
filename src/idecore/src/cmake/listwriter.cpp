@@ -135,7 +135,10 @@ void write_target(std::ostream& os, const target_t& target)
 
     if(!target.label.empty())
         os << "SET_PROPERTY( TARGET " << target.name << " PROPERTY PROJECT_LABEL \"" << target.label << "\" )\n";
-    
+
+    if(!target.output_name.empty())
+        os << "SET_PROPERTY( TARGET " << target.output_name << " PROPERTY OUTPUT_NAME \"" << target.output_name << "\" )\n";
+
     if(!target.version.empty())
     {
         os << "SET( " << target_var << "_MAJOR_VERSION " << target.version.major << " )\n";

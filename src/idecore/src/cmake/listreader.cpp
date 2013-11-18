@@ -456,6 +456,10 @@ void list_reader_t::end_command()
                     {
                         target->label = *it;
                     }
+                    else if(prop == "OUTPUT_NAME")
+                    {
+                        target->output_name = *it;
+                    }
                     else if(prop == "LINK_FLAGS")
                     {
                         auto flags = *it;

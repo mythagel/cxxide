@@ -37,6 +37,9 @@ std::string str(const target_t& target, int level)
     if(!target.label.empty())
         s << p << "label: " << target.label << "\n";
 
+    if(!target.output_name.empty())
+        s << p << "output_name: " << target.output_name << "\n";
+
     switch(target.type)
     {
         case target_t::executable:
@@ -187,6 +190,7 @@ int main(int argc, char* argv[])
         target_t foo;
         foo.name = "foo";
         foo.label = "Foo executable";
+        foo.output_name = "foo";
         foo.type = target_t::executable;
         foo.version = {1, 2, 3};
         foo.sources = {"a.cpp", "b.cpp", "c.cpp"};

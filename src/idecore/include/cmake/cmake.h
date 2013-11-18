@@ -53,6 +53,7 @@ struct target_t
 {
     std::string name;
     std::string label;
+    std::string output_name;
     enum type_t
     {
         executable,

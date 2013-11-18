@@ -139,6 +139,15 @@ void target_t::label(const std::string& label)
     target.get().label = label;
 }
 
+std::string target_t::output_name() const
+{
+    return target.get().output_name;
+}
+void target_t::output_name(const std::string& name)
+{
+    target.get().output_name = name;
+}
+
 config::target_t::type_t target_t::type() const
 {
     return target.get().type;
