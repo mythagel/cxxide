@@ -46,6 +46,35 @@ int create(const std::vector<std::string>& args);
 int create_dir(const std::vector<std::string>& args);
 int create_target(const std::vector<std::string>& args);
 
+int target_name(const std::vector<std::string>& args);
+int target_label(const std::vector<std::string>& args);
+int target_output_name(const std::vector<std::string>& args);
+int target_type(const std::vector<std::string>& args);
+int target_version(const std::vector<std::string>& args);
+
+int target_sources(const std::vector<std::string>& args);
+int target_sources_add(const std::vector<std::string>& args);
+int target_sources_remove(const std::vector<std::string>& args);
+
+int target_definitions(const std::vector<std::string>& args);
+int target_definitions_add(const std::vector<std::string>& args);
+int target_definitions_remove(const std::vector<std::string>& args);
+
+int target_includes(const std::vector<std::string>& args);
+int target_includes_add(const std::vector<std::string>& args);
+int target_includes_remove(const std::vector<std::string>& args);
+
+int target_compile_flags(const std::vector<std::string>& args);
+int target_link_flags(const std::vector<std::string>& args);
+
+int target_libs(const std::vector<std::string>& args);
+int target_libs_add(const std::vector<std::string>& args);
+int target_libs_remove(const std::vector<std::string>& args);
+
+int target_packages(const std::vector<std::string>& args);
+int target_packages_add(const std::vector<std::string>& args);
+int target_packages_remove(const std::vector<std::string>& args);
+
 }
 
 struct subcommand
@@ -73,6 +102,42 @@ int main(int argc, char* argv[])
             {
                 {"dir", "Create a new source directory", commands::create_dir, {}},
                 {"target", "Create a new target", commands::create_target, {}}
+            }
+        },
+        {"target", "Commands on targets", nullptr,
+            {
+                {"name", "Target name", commands::target_name, {}},
+                {"label", "Descriptive label", commands::target_label, {}},
+                {"output_name", "Output filename", commands::target_version, {}},
+                {"type", "Target type {executable / shared_library / static_library}", commands::target_type, {}},
+                {"version", "Version number (major[.minor[.patch]])", commands::target_version, {}},
+                {"sources", "Source list", commands::target_sources, 
+                    {
+                        {"add", "Add source file", commands::target_sources_add, {}},
+                        {"remove", "Remove source file", commands::target_sources_remove, {}}
+                    }},
+                {"definitions", "", commands::target_definitions, 
+                    {
+                        {"add", "Add preprocessor defintion", commands::target_definitions_add, {}},
+                        {"remove", "Remove preprocessor defintion", commands::target_definitions_remove, {}}
+                    }},
+                {"includes", "", commands::target_includes, 
+                    {
+                        {"add", "Add include directory", commands::target_includes_add, {}},
+                        {"remove", "Remove include directory", commands::target_includes_remove, {}}
+                    }},
+                {"compile_flags", "Compiler flags", commands::target_compile_flags, {}},
+                {"link_flags", "Linker flags", commands::target_link_flags, {}},
+                {"libs", "", commands::target_libs, 
+                    {
+                        {"add", "Add link library", commands::target_libs_add, {}},
+                        {"remove", "Remove link library", commands::target_libs_remove, {}}
+                    }},
+                {"packages", "", commands::target_packages, 
+                    {
+                        {"add", "Add package", commands::target_packages_add, {}},
+                        {"remove", "Remove package", commands::target_packages_remove, {}}
+                    }}
             }
         }
     };
@@ -244,6 +309,7 @@ int create_target(const std::vector<std::string>& args)
 
     po::positional_options_description p;
     p.add("name", 1);
+    p.add("type", 1);
     po::options_description desc;
     desc.add(common_options).add(command_options);
 
@@ -283,6 +349,102 @@ int create_target(const std::vector<std::string>& args)
     return 0;
 }
 
+int target_name(const std::vector<std::string>& args)
+{
+    std::copy(args.begin(), args.end(), std::ostream_iterator<std::string>(std::cerr, "\n"));
+    throw std::logic_error("Unimplemented");
+}
+int target_label(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_output_name(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_type(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_version(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_sources(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_sources_add(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_sources_remove(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_definitions(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_definitions_add(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_definitions_remove(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_includes(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_includes_add(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_includes_remove(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_compile_flags(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_link_flags(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_libs(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_libs_add(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_libs_remove(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
+int target_packages(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_packages_add(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+int target_packages_remove(const std::vector<std::string>& args)
+{
+    throw std::logic_error("Unimplemented");
+}
+
 }
 
 void print_exception(const std::exception& e, int level)
@@ -309,18 +471,15 @@ void out_nested(std::ostream& os, const subcommand& cmd, size_t n)
     std::string indent;
     for(size_t i = 0; i < n; ++i)
         indent += "  ";
+    size_t pad = std::abs(40 - (indent.size() + cmd.name.size()));
     if(!cmd.description.empty())
-        os << indent << cmd.name << "\t: \t\t" << cmd.description << "\n";
+        os << indent << cmd.name << std::string(pad, ' ') << ":    " << cmd.description << "\n";
     else
         os << indent << cmd.name << "\n";
     if(!cmd.command)
         os << indent << std::string(cmd.name.size(), '-') << "\n";
     for(auto& sc : cmd.subcommands)
-    {
-        os << indent;
         out_nested(os, sc, n+1);
-        os << "\n";
-    }
 }
 
 }
