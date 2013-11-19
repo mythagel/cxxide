@@ -20,6 +20,13 @@ void print_exception(const std::exception& e, int level = 0);
 /*
 Interface
 
+$ microide init project_name
+$ cd project_name
+$ microide mkdir src
+$ cd src
+$ microide init target example
+$ microide target example sources add 
+
 microide command [args]
 
 microide create project_name
@@ -471,9 +478,9 @@ void out_nested(std::ostream& os, const subcommand& cmd, size_t n)
     std::string indent;
     for(size_t i = 0; i < n; ++i)
         indent += "  ";
-    size_t pad = std::abs(40 - (indent.size() + cmd.name.size()));
+    size_t pad = std::abs(20 - (indent.size() + cmd.name.size()));
     if(!cmd.description.empty())
-        os << indent << cmd.name << std::string(pad, ' ') << ":    " << cmd.description << "\n";
+        os << indent << cmd.name << std::string(pad, ' ') << ": " << cmd.description << "\n";
     else
         os << indent << cmd.name << "\n";
     if(!cmd.command)
