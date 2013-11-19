@@ -538,104 +538,92 @@ directory_t project_t::directory(fs::path path)
 }
 
 void project_t::read()
+try
 {
-    try
-    {
-        configuration = cmake::config::read(source_path);
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::read failed"));
-    }
+    configuration = cmake::config::read(source_path);
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::read failed"));
 }
 void project_t::write()
+try
 {
-    try
-    {
-        cmake::config::write(source_path, configuration);
-    }
-    catch(const cmake::config::error_unmanaged& e)
-    {
-        configuration.managed = false;
-        std::throw_with_nested(error("cmake::write failed"));
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::write failed"));
-    }
+    cmake::config::write(source_path, configuration);
+}
+catch(const cmake::config::error_unmanaged& e)
+{
+    configuration.managed = false;
+    std::throw_with_nested(error("cmake::write failed"));
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::write failed"));
 }
 
 void project_t::generate()
+try
 {
-    try
-    {
-        if(build_path.empty())
-            throw std::logic_error("generate: build path empty");
-        
-        auto args = std::vector<std::string>({"cmake", source_path.native(), "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
-        
-        system::stream_t stream;
-        int err = system::exec(build_path.native(), args, &stream);
-        if(err) throw error("cmake: " + stream.err);
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::generate failed"));
-    }
+    if(build_path.empty())
+        throw std::logic_error("generate: build path empty");
+
+    auto args = std::vector<std::string>({"cmake", source_path.native(), "-GNinja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"});
+
+    system::stream_t stream;
+    int err = system::exec(build_path.native(), args, &stream);
+    if(err) throw error("cmake: " + stream.err);
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::generate failed"));
 }
 void project_t::build()
+try
 {
-    try
-    {
-        if(build_path.empty())
-            throw std::logic_error("build: build path empty");
-        
-        auto args = std::vector<std::string>({"cmake", "--build", build_path.native()});
-        
-        system::stream_t stream;
-        int err = system::exec(build_path.native(), args, &stream);
-        if(err) throw error("cmake: " + stream.err);
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::build failed"));
-    }
+    if(build_path.empty())
+        throw std::logic_error("build: build path empty");
+
+    auto args = std::vector<std::string>({"cmake", "--build", build_path.native()});
+
+    system::stream_t stream;
+    int err = system::exec(build_path.native(), args, &stream);
+    if(err) throw error("cmake: " + stream.err);
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::build failed"));
 }
 
 project_t create(const std::string& name, const fs::path& source_path, const fs::path& build_path)
+try
 {
-    try
-    {
-        project_t project;
-        project.source_path = canonical(source_path);
-        project.build_path = canonical(build_path);
-        
-        project.configuration.name = name;
-        cmake::config::write(source_path, project.configuration);
+    project_t project;
+    project.source_path = canonical(source_path);
+    project.build_path = canonical(build_path);
 
-        return project;
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::create failed"));
-    }
+    project.configuration.name = name;
+    cmake::config::write(source_path, project.configuration);
+
+    return project;
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::create failed"));
 }
 
 project_t open(const fs::path& source_path, const fs::path& build_path)
+try
 {
-    try
-    {
-        project_t project;
-        project.source_path = canonical(source_path);
-        project.build_path = canonical(build_path);
-        project.configuration = cmake::config::read(project.source_path);
-        
-        return project;
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error("cmake::open failed"));
-    }
+    project_t project;
+    project.source_path = canonical(source_path);
+    project.build_path = canonical(build_path);
+    project.configuration = cmake::config::read(project.source_path);
+
+    return project;
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::open failed"));
 }
 
 }

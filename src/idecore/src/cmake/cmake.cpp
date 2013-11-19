@@ -106,68 +106,64 @@ void commit(const fs::path& path, const directory_t& directory)
 }
 
 void write_subdirectory(const fs::path& path, const directory_t& directory)
+try
 {
-    try
+    fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
+    fs::ofstream os(path / "CMakeLists.txt.tmp");
+    if(!os)
+        throw error(std::string("Unable to open ") + (path / "CMakeLists.txt.tmp").native());
+
+    std::string source;
+    if(ifs)
     {
-        fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
-        fs::ofstream os(path / "CMakeLists.txt.tmp");
-        if(!os)
-            throw error(std::string("Unable to open ") + (path / "CMakeLists.txt.tmp").native());
-        
-        std::string source;
-        if(ifs)
-        {
-            std::noskipws(ifs);
-            source = std::string{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-        }
-
-        list_rewriter_t rewrite(os, nullptr, directory);
-
-        auto c = source.c_str();
-        auto end = c + source.size();
-
-        // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
-        rewrite.parse(c, end);
-        
-        // Recursively write subdirectory files.
-        for(auto& subdir : directory.subdirectories)
-            write_subdirectory(path / subdir.first, subdir.second);
-        
+        std::noskipws(ifs);
+        source = std::string{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
     }
-    catch(...)
-    {
-        std::throw_with_nested(error(std::string("cmake::write_subdirectory(") + path.native() + ") failed"));
-    }
+
+    list_rewriter_t rewrite(os, nullptr, directory);
+
+    auto c = source.c_str();
+    auto end = c + source.size();
+
+    // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
+    rewrite.parse(c, end);
+
+    // Recursively write subdirectory files.
+    for(auto& subdir : directory.subdirectories)
+        write_subdirectory(path / subdir.first, subdir.second);
+
+}
+catch(...)
+{
+    std::throw_with_nested(error(std::string("cmake::write_subdirectory(") + path.native() + ") failed"));
 }
 
 void read_subdirectory(const fs::path& path, directory_t* directory)
+try
 {
-    try
-    {
-        fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
-        if(!ifs)
-            throw error(std::string("Unable to open ") + (path / "CMakeLists.txt").native());
-        
-        std::noskipws(ifs);
-        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-        
-        list_reader_t reader(nullptr, directory);
-        
-        auto c = source.c_str();
-        auto end = c + source.size();
-        
-        // Read CMakeLists.txt and fill config
-        reader.parse(c, end);
-        
-        // Recursively read subdirectory files.
-        for(auto& subdir : directory->subdirectories)
-            read_subdirectory(path / subdir.first, &subdir.second);
-        
-    }
-    catch(...)
-    {
-        std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path.native() + ") failed"));
-    }
+    fs::ifstream ifs(path / "CMakeLists.txt", std::ios::in | std::ios::binary);
+    if(!ifs)
+        throw error(std::string("Unable to open ") + (path / "CMakeLists.txt").native());
+
+    std::noskipws(ifs);
+    std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+
+    list_reader_t reader(nullptr, directory);
+
+    auto c = source.c_str();
+    auto end = c + source.size();
+
+    // Read CMakeLists.txt and fill config
+    reader.parse(c, end);
+
+    // Recursively read subdirectory files.
+    for(auto& subdir : directory->subdirectories)
+        read_subdirectory(path / subdir.first, &subdir.second);
+
+}
+catch(...)
+{
+    std::throw_with_nested(error(std::string("cmake::read_subdirectory(") + path.native() + ") failed"));
 }
 
 void write_template(const std::string& name, const fs::path& path)
@@ -259,32 +255,28 @@ void write(const fs::path& root_path, const configuration_t& config)
 
         std::noskipws(ifs);
         std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-        
+
         fs::ofstream os(root_path / "CMakeLists.txt.tmp");
         if(!os)
             throw error("Unable to write CMakeLists.txt.tmp");
-        
+
         list_rewriter_t rewrite(os, &config, config.directory);
-        
+
         auto c = source.c_str();
         auto end = c + source.size();
-        
+
         // Parses CMakeLists.txt and writes new content into CMakeLists.txt.tmp
         rewrite.parse(c, end);
-        
-        if(rewrite.managed())
-        {
-            // Recursively write subdirectory files.
-            for(auto& subdir : config.directory.subdirectories)
-                write_subdirectory(root_path / subdir.first, subdir.second);
-            
-            // Rename CMakeLists.txt.tmp -> CMakeLists.txt recursively
-            commit(root_path, config.directory);
-        }
-        else
-        {
-            throw error("Cannot write; Configuration is unmanaged.");
-        }
+
+        if(!rewrite.managed())
+            throw error_unmanaged();
+
+        // Recursively write subdirectory files.
+        for(auto& subdir : config.directory.subdirectories)
+            write_subdirectory(root_path / subdir.first, subdir.second);
+
+        // Rename CMakeLists.txt.tmp -> CMakeLists.txt recursively
+        commit(root_path, config.directory);
     }
     catch(...)
     {
@@ -301,44 +293,42 @@ void write(const fs::path& root_path, const configuration_t& config)
 }
 
 configuration_t read(const fs::path& root_path)
+try
 {
-    try
-    {
-        configuration_t config;
-        
-        fs::ifstream ifs(root_path / "CMakeLists.txt", std::ios::in | std::ios::binary);
-        if(!ifs)
-            throw error("Unable to read CMakeLists.txt");
+    configuration_t config;
 
-        std::noskipws(ifs);
-        std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
-        
-        list_reader_t reader(&config, &config.directory);
-        
-        auto c = source.c_str();
-        auto end = c + source.size();
-        
-        // Read CMakeLists.txt and fill config
-        reader.parse(c, end);
-        
-        if(reader.managed())
-        {
-            // Recursively read subdirectory files.
-            for(auto& subdir : config.directory.subdirectories)
-                read_subdirectory(root_path / subdir.first, &subdir.second);
-            
-            return config;
-        }
-        else
-        {
-            config.managed = false;
-            return config;
-        }
-    }
-    catch(...)
+    fs::ifstream ifs(root_path / "CMakeLists.txt", std::ios::in | std::ios::binary);
+    if(!ifs)
+        throw error("Unable to read CMakeLists.txt");
+
+    std::noskipws(ifs);
+    std::string source{std::istream_iterator<char>(ifs), std::istream_iterator<char>()};
+
+    list_reader_t reader(&config, &config.directory);
+
+    auto c = source.c_str();
+    auto end = c + source.size();
+
+    // Read CMakeLists.txt and fill config
+    reader.parse(c, end);
+
+    if(reader.managed())
     {
-        std::throw_with_nested(error("cmake::read failed"));
+        // Recursively read subdirectory files.
+        for(auto& subdir : config.directory.subdirectories)
+            read_subdirectory(root_path / subdir.first, &subdir.second);
+        
+        return config;
     }
+    else
+    {
+        config.managed = false;
+        return config;
+    }
+}
+catch(...)
+{
+    std::throw_with_nested(error("cmake::read failed"));
 }
 
 }
