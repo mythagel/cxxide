@@ -38,6 +38,17 @@ std::vector<char*> convert_args(const std::vector<std::string>& args)
     
     return argv;
 }
+
+std::vector<CXUnsavedFile> convert_unsaved_files(const std::vector<unsaved_file>& unsaved_files)
+{
+    std::vector<CXUnsavedFile> files;
+    
+    for(auto& file : unsaved_files)
+        files.push_back({ file.filename.c_str(), file.content.c_str(), file.content.size() });
+    
+    return files;
+}
+
 }
 
 struct string
@@ -86,10 +97,11 @@ index::index(index&& o)
     std::swap(idx, o.idx);
 }
 
-translation_unit& index::create_translation_unit(const std::string& filename, const std::vector<std::string>& args)
+translation_unit& index::create_translation_unit(const std::string& filename, const std::vector<std::string>& args, const std::vector<unsaved_file>& unsaved)
 {
     auto argv = convert_args(args);
-    auto tu = clang_createTranslationUnitFromSourceFile(idx, filename.c_str(), argv.size(), argv.data(), 0, nullptr);
+    auto unsaved_files = convert_unsaved_files(unsaved);
+    auto tu = clang_createTranslationUnitFromSourceFile(idx, filename.c_str(), argv.size(), argv.data(), unsaved_files.size(), unsaved_files.data());
     if(!tu)
         throw error("unable to parse tu");
     
@@ -97,18 +109,19 @@ translation_unit& index::create_translation_unit(const std::string& filename, co
     return tus.back();
 }
 
-translation_unit& index::parse_translation_unit(const std::vector<std::string>& args)
+translation_unit& index::parse_translation_unit(const std::vector<std::string>& args, const std::vector<unsaved_file>& unsaved)
 {
     auto argv = convert_args(args);
+    auto unsaved_files = convert_unsaved_files(unsaved);
     unsigned options = CXTranslationUnit_DetailedPreprocessingRecord | 
                         CXTranslationUnit_CacheCompletionResults;
     
-    auto tu = clang_parseTranslationUnit(idx, nullptr, argv.data(), argv.size(), nullptr, 0, options);
+    auto tu = clang_parseTranslationUnit(idx, nullptr, argv.data(), argv.size(), unsaved_files.data(), unsaved_files.size(), options);
     if(!tu)
         throw error("unable to parse tu");
 
     // Have to reparse to cache completion results.
-    int err = clang_reparseTranslationUnit(tu, 0, 0, clang_defaultReparseOptions(tu));
+    int err = clang_reparseTranslationUnit(tu, unsaved_files.size(), unsaved_files.data(), clang_defaultReparseOptions(tu));
     if(err)
     {
         clang_disposeTranslationUnit(tu);
@@ -152,10 +165,11 @@ void translation_unit::reparse()
     }
 }
 
-code_complete_results translation_unit::codeCompleteAt(const std::string& filename, unsigned line, unsigned column)
+code_complete_results translation_unit::codeCompleteAt(const std::string& filename, unsigned line, unsigned column, const std::vector<unsaved_file>& unsaved)
 {
+    auto unsaved_files = convert_unsaved_files(unsaved);
     auto options = clang_defaultCodeCompleteOptions();
-    return { clang_codeCompleteAt(tu, filename.c_str(), line, column, nullptr, 0, options) };
+    return { clang_codeCompleteAt(tu, filename.c_str(), line, column, unsaved_files.data(), unsaved_files.size(), options) };
 }
 
 unsigned translation_unit::num_diagnostics()
