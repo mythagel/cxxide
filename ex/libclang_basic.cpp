@@ -33,8 +33,43 @@ std::ostream& operator<<(std::ostream& os, const clang::source_location& loc)
     return os;
 }
 
+void index_std()
+{
+    std::cout << "index_std=======================================================\n";
+    clang::index index;
+    
+    std::vector<std::string> args = {"CC", "/home/nicholas/dev/cxxide/ex/stdlib-c++03.cpp"};
+    args.push_back("-I/usr/include/clang/3.0/include/");
+
+    auto& tu = index.parse_translation_unit(args);
+    std::cout << "parsed: " << tu.spelling() << "\n";
+    
+    {
+        auto cursor = tu.get_cursor();
+        
+        unsigned depth = 1;
+        std::function<CXChildVisitResult(const clang::cursor& cur, const clang::cursor& parent)> visitor = [&depth, &visitor](clang::cursor cur, clang::cursor parent) -> CXChildVisitResult
+        {
+            if(!cur.isUnexposed())
+            {
+                std::cout << std::string(depth, ' ') << cur.location() << " " << clang::to_string(cur.kind()) << " " << cur.spelling() << "\n";
+            }
+            
+            ++depth;
+            cur.visitChildren(visitor);
+            --depth;
+            
+            return CXChildVisit_Continue;
+        };
+        cursor.visitChildren(visitor);
+    }
+    std::cout << "index_std=======================================================\n";
+}
+
 int main()
 {
+    index_std();
+    
     clang::index idx;
 
     clang::compilation_db db("/home/nicholas/dev/build/cxxide");
