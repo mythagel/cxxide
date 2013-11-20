@@ -18,26 +18,13 @@ po::options_description user_options("microide options");
 void print_exception(const std::exception& e, int level = 0);
 
 /*
-Interface
 
-$ microide init project_name
-$ cd project_name
-$ microide mkdir src
-$ cd src
-$ microide init target example
-$ microide target example sources add 
+use linenoise 
 
-microide command [args]
+microide --create blah
+microide [--path x] [--build=path x] [--exec "cmd"]
 
-microide create project_name
-
-microide rename blah2
-microide package add blah
-microide package remove blah
-microide target init blah
-microide target add source
-microide target set cflags blah
-microide source
+microide> blah commands
 
 source create header blah [--lang c++/c]
 source create source blah [--lang c++/c]
