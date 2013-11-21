@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 #include <vector>
-#include <map>
+#include <memory>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include "linenoise.h"
@@ -13,7 +13,17 @@ using namespace cxxide;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
+namespace commands {
+struct command;
+}
+
 void print_exception(const std::exception& e, int level = 0);
+
+struct
+{
+    project::project_t* project = nullptr;
+    std::vector<std::shared_ptr<commands::command>> commands;
+} global;
 
 namespace
 {
@@ -33,6 +43,24 @@ bool is_child_of(const fs::path& child, const fs::path& path)
     if(path_mag > child_mag) return false;
 
     return std::equal(begin(path), end(path), begin(child));
+}
+
+fs::path relative_child_of(fs::path path, const fs::path& source_path)
+{
+    using std::begin;
+    using std::end;
+    if(path.is_absolute())
+    {
+        if(!is_child_of(path, source_path))
+            throw std::logic_error("path not child of source path");
+        
+        fs::path p;
+        for(auto it = std::mismatch(begin(source_path), end(source_path), begin(path)).second; it != end(path); ++it)
+            p /= *it;
+        path = p;
+    }
+    
+    return path;
 }
 
 }
@@ -70,7 +98,7 @@ struct command
     {
     }
     
-    virtual std::vector<std::string> completion(const std::string& buffer) =0;
+    virtual std::vector<std::string> completion(const std::vector<std::string>& args) =0;
     virtual void execute(const std::vector<std::string>& args) =0;
     virtual ~command()
     {
@@ -92,15 +120,14 @@ struct mkdir : command
         p.add("name", -1);
     }
     
-    std::vector<std::string> completion(const std::string& buffer) override
+    std::vector<std::string> completion(const std::vector<std::string>&) override
     {
-        // todo
+        return {};
     }
     void execute(const std::vector<std::string>& args) override
     {
         po::variables_map vm;
-        po::store(po::command_line_parser(ac, av). 
-                  options(options).positional(p).run(), vm);
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
 
         if(vm.count("help"))
         {
@@ -114,7 +141,7 @@ struct mkdir : command
         for(auto& dir : dirs)
         {
             fs::path path = dir;
-            project.directory_create(absolute(path));
+            global.project->directory_create(absolute(path));
         }
     }
     
@@ -137,15 +164,36 @@ struct cd : command
         p.add("path", 1);
     }
     
-    std::vector<std::string> completion(const std::string& buffer) override
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
-        // todo expand path
+        std::vector<std::string> opts;
+        
+        fs::path path = global.project->root();
+        if(!args.empty())
+            path = args.back();
+
+        try
+        {
+            path = relative_child_of(path, global.project->root());
+            
+            if (exists(path) && is_directory(path))
+            {
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                    opts.push_back(child.native());
+            }
+        }
+        catch (const fs::filesystem_error& e)
+        {
+            std::cerr << e.what() << "\n";
+        }
+        return opts;
     }
     void execute(const std::vector<std::string>& args) override
     {
         po::variables_map vm;
-        po::store(po::command_line_parser(ac, av). 
-                  options(options).positional(p).run(), vm);
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
 
         if(vm.count("help"))
         {
@@ -156,7 +204,7 @@ struct cd : command
         po::notify(vm);
 
         fs::path path = vm["path"].as<std::string>();
-        if(!is_child_of(path, project.root()))
+        if(!is_child_of(path, global.project->root()))
             throw std::runtime_error("cd outside of project path");
         current_path(path);
     }
@@ -169,23 +217,44 @@ struct cd : command
 }
 
 void completion(const char* raw, linenoiseCompletions* lc)
+try
 {
     std::string buffer = raw;
     
     if(buffer.empty())
     {
         // list out top level commands.
-        linenoiseAddCompletion(lc, "option1");
+        for(auto& cmd : global.commands)
+            linenoiseAddCompletion(lc, cmd->name.c_str());
         return;
     }
 
     auto args = po::split_unix(buffer);
-    
-    if (buffer[0] == 'h')
+    if(args.empty())
+        return;
+
+    for(auto& cmd : global.commands)
     {
-        linenoiseAddCompletion(lc, "hello");
-        linenoiseAddCompletion(lc, "hello there");
+        if(cmd->name == args[0])
+        {
+            auto cmd_args = args;
+            cmd_args.erase(cmd_args.begin());
+
+            auto opts = cmd->completion(cmd_args);
+            for(auto opt : opts)
+            {
+                opt = args[0] + " " + opt; 
+                linenoiseAddCompletion(lc, opt.c_str());
+            }
+        }
+        else if(cmd->name.find(args[0]) == 0)
+        {
+            linenoiseAddCompletion(lc, cmd->name.c_str());
+        }
     }
+}
+catch(...)
+{
 }
 
 int main(int argc, char* argv[])
@@ -229,6 +298,10 @@ int main(int argc, char* argv[])
         }
 
         auto project = project::open(path, build_path);
+        global.project = &project;
+
+        global.commands.push_back(std::make_shared<commands::mkdir>());
+        global.commands.push_back(std::make_shared<commands::cd>());
 
         while(auto raw = linenoise("microide> "))
         {
