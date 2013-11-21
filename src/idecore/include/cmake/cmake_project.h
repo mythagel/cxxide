@@ -163,6 +163,7 @@ public:
 
     std::string name() const;
     bool managed() const;
+    boost::filesystem::path root() const;
 
     void packages(const std::set<std::string>& pkgs);
     std::set<std::string> packages() const;

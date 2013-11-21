@@ -466,6 +466,10 @@ bool project_t::managed() const
 {
     return configuration.managed;
 }
+fs::path project_t::root() const
+{
+    return source_path;
+}
 
 void project_t::packages(const std::set<std::string>& pkgs)
 {
