@@ -63,22 +63,24 @@ bool is_child_of(const fs::path& child, const fs::path& path)
     return std::equal(begin(path), end(path), begin(child));
 }
 
-fs::path relative_child_of(fs::path path, const fs::path& source_path)
+// Return path when appended to a_From will resolve to same as a_To
+boost::filesystem::path make_relative( boost::filesystem::path a_From, boost::filesystem::path a_To )
 {
-    using std::begin;
-    using std::end;
-    if(path.is_absolute())
+    a_From = boost::filesystem::absolute( a_From ); a_To = boost::filesystem::absolute( a_To );
+    boost::filesystem::path ret;
+    boost::filesystem::path::const_iterator itrFrom( a_From.begin() ), itrTo( a_To.begin() );
+    // Find common base
+    for( boost::filesystem::path::const_iterator toEnd( a_To.end() ), fromEnd( a_From.end() ) ; itrFrom != fromEnd && itrTo != toEnd && *itrFrom == *itrTo; ++itrFrom, ++itrTo );
+    // Navigate backwards in directory to reach previously found base
+    for( boost::filesystem::path::const_iterator fromEnd( a_From.end() ); itrFrom != fromEnd; ++itrFrom )
     {
-        if(!is_child_of(path, source_path))
-            throw std::logic_error("path not child of source path");
-        
-        fs::path p;
-        for(auto it = std::mismatch(begin(source_path), end(source_path), begin(path)).second; it != end(path); ++it)
-            p /= *it;
-        path = p;
+        if( (*itrFrom) != "." )
+            ret /= "..";
     }
-    
-    return path;
+    // Now navigate down the directory branch
+    for( ; itrTo != a_To.end() ; ++itrTo )
+        ret /= *itrTo;
+    return ret;
 }
 
 }
@@ -482,14 +484,13 @@ std::set<std::string> project_t::packages() const
 
 directory_t project_t::directory_create(fs::path path)
 {
-    path = relative_child_of(path, source_path);
+    path = make_relative(source_path, path);
 
     try
     {
         // Create the filesystem paths
         auto full_path = source_path / path;
         create_directories(full_path);
-
         // Create the entries in the configuration.
         auto cur = std::ref(configuration.directory);
         for(auto& dir : path)
@@ -521,7 +522,7 @@ directory_t project_t::directory_create(fs::path path)
 
 directory_t project_t::directory(fs::path path)
 {
-    path = relative_child_of(path, source_path);
+    path = make_relative(source_path, path);
 
     auto cur = std::ref(configuration.directory);
     for(auto& dir : path)

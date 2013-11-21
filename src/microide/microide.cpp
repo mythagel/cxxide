@@ -45,22 +45,24 @@ bool is_child_of(const fs::path& child, const fs::path& path)
     return std::equal(begin(path), end(path), begin(child));
 }
 
-fs::path relative_child_of(fs::path path, const fs::path& source_path)
+// Return path when appended to a_From will resolve to same as a_To
+boost::filesystem::path make_relative( boost::filesystem::path a_From, boost::filesystem::path a_To )
 {
-    using std::begin;
-    using std::end;
-    if(path.is_absolute())
+    a_From = boost::filesystem::absolute( a_From ); a_To = boost::filesystem::absolute( a_To );
+    boost::filesystem::path ret;
+    boost::filesystem::path::const_iterator itrFrom( a_From.begin() ), itrTo( a_To.begin() );
+    // Find common base
+    for( boost::filesystem::path::const_iterator toEnd( a_To.end() ), fromEnd( a_From.end() ) ; itrFrom != fromEnd && itrTo != toEnd && *itrFrom == *itrTo; ++itrFrom, ++itrTo );
+    // Navigate backwards in directory to reach previously found base
+    for( boost::filesystem::path::const_iterator fromEnd( a_From.end() ); itrFrom != fromEnd; ++itrFrom )
     {
-        if(!is_child_of(path, source_path))
-            throw std::logic_error("path not child of source path");
-        
-        fs::path p;
-        for(auto it = std::mismatch(begin(source_path), end(source_path), begin(path)).second; it != end(path); ++it)
-            p /= *it;
-        path = p;
+        if( (*itrFrom) != "." )
+            ret /= "..";
     }
-    
-    return path;
+    // Now navigate down the directory branch
+    for( ; itrTo != a_To.end() ; ++itrTo )
+        ret /= *itrTo;
+    return ret;
 }
 
 }
@@ -102,7 +104,6 @@ struct command
     virtual void execute(const std::vector<std::string>& args) =0;
     virtual ~command()
     {
-    
     }
 };
 
@@ -115,7 +116,7 @@ struct mkdir : command
     {
         options.add_options()
             ("help", "display this help and exit")
-            ("name", po::value<std::vector<std::string>>()->value_name("name"), "Directory name")
+            ("name", po::value<std::vector<std::string>>()->value_name("name")->required(), "Directory name")
         ;
         p.add("name", -1);
     }
@@ -140,9 +141,11 @@ struct mkdir : command
         auto dirs = vm["name"].as<std::vector<std::string>>();
         for(auto& dir : dirs)
         {
-            fs::path path = dir;
-            global.project->directory_create(absolute(path));
+            fs::path path = fs::current_path() / dir;
+            global.project->directory_create(path);
         }
+
+        global.project->write_config();
     }
     
     virtual ~mkdir()
@@ -159,34 +162,57 @@ struct cd : command
     {
         options.add_options()
             ("help", "display this help and exit")
-            ("path", po::value<std::string>()->value_name("name"), "Directory name")
+            ("path", po::value<std::string>()->value_name("name")->required(), "Directory name")
         ;
         p.add("path", 1);
     }
     
     std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
+        if(args.size() > 1) return {};
         std::vector<std::string> opts;
-        
-        fs::path path = global.project->root();
+
+        fs::path path = fs::current_path();
         if(!args.empty())
-            path = args.back();
+            path = path / args[0];
+
+        if(exists(path) && !is_child_of(canonical(absolute(path)), global.project->root()))
+            return {};
+        else if(exists(path.parent_path()) && !is_child_of(canonical(absolute(path.parent_path())), global.project->root()))
+            return {};
 
         try
         {
-            path = relative_child_of(path, global.project->root());
-            
             if (exists(path) && is_directory(path))
             {
                 std::vector<fs::path> children;
                 std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
                 for(auto& child : children)
-                    opts.push_back(child.native());
+                {
+                    if(is_directory(child))
+                        opts.push_back(make_relative(fs::current_path(), child).native());
+                }
+            }
+            else if(exists(path.parent_path()) && is_directory(path.parent_path()))
+            {
+                std::string partial = path.filename().native();
+                path = path.parent_path();
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    if(is_directory(child))
+                    {
+                        std::string opt = make_relative(fs::current_path(), child).native();
+                        if(child.filename().native().find(partial) == 0)
+                            opts.push_back(opt);
+                    }
+                }
             }
         }
-        catch (const fs::filesystem_error& e)
+        catch (const std::exception& e)
         {
-            std::cerr << e.what() << "\n";
+            print_exception(e);
         }
         return opts;
     }
@@ -204,12 +230,150 @@ struct cd : command
         po::notify(vm);
 
         fs::path path = vm["path"].as<std::string>();
-        if(!is_child_of(path, global.project->root()))
+        path = absolute(path);
+        if(!is_child_of(canonical(path), global.project->root()))
             throw std::runtime_error("cd outside of project path");
+
         current_path(path);
     }
     
     virtual ~cd()
+    {
+    }
+};
+
+struct pwd : command
+{
+    pwd()
+     : command("pwd")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+        ;
+    }
+    
+    std::vector<std::string> completion(const std::vector<std::string>&) override
+    {
+        return {};
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        std::cout << make_relative(global.project->root(), fs::current_path()).native() << "\n";
+    }
+    
+    virtual ~pwd()
+    {
+    }
+};
+
+struct ls : command
+{
+    po::positional_options_description p;
+
+    ls()
+     : command("ls")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("path", po::value<std::string>()->value_name("name"), "Directory name")
+        ;
+        p.add("path", 1);
+    }
+    
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
+    {
+        if(args.size() > 1) return {};
+        std::vector<std::string> opts;
+
+        fs::path path;
+        if(!args.empty())
+            path = global.project->root() / args[0];
+        else 
+            path = fs::current_path();
+
+        if(exists(path) && !is_child_of(canonical(absolute(path)), global.project->root()))
+            return {};
+        else if(exists(path.parent_path()) && !is_child_of(canonical(absolute(path.parent_path())), global.project->root()))
+            return {};
+
+        try
+        {
+            if (exists(path) && is_directory(path))
+            {
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    opts.push_back(make_relative(fs::current_path(), child).native());
+                }
+            }
+            else if(exists(path.parent_path()) && is_directory(path.parent_path()))
+            {
+                std::string partial = path.filename().native();
+                path = path.parent_path();
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    std::string opt = make_relative(fs::current_path(), child).native();
+                    if(child.filename().native().find(partial) == 0)
+                        opts.push_back(opt);
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+            print_exception(e);
+        }
+        return opts;
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        fs::path path = fs::current_path();
+        if(vm.count("path"))
+            path = path / vm["path"].as<std::string>();
+
+        try
+        {
+            if (exists(path) && is_directory(path))
+            {
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    std::cout << make_relative(fs::current_path(), child).native() << "\n";
+                }
+            }
+        }
+        catch (const fs::filesystem_error& e)
+        {
+            std::cerr << e.what() << "\n";
+        }
+    }
+    
+    virtual ~ls()
     {
     }
 };
@@ -295,13 +459,19 @@ int main(int argc, char* argv[])
             project::create(name, path, build_path);
             
             path /= name;
+            if(vm.count("build-path"))
+                build_path /= name;
         }
 
         auto project = project::open(path, build_path);
         global.project = &project;
 
+        current_path(path);
+
         global.commands.push_back(std::make_shared<commands::mkdir>());
         global.commands.push_back(std::make_shared<commands::cd>());
+        global.commands.push_back(std::make_shared<commands::pwd>());
+        global.commands.push_back(std::make_shared<commands::ls>());
 
         while(auto raw = linenoise("microide> "))
         {
@@ -310,11 +480,34 @@ int main(int argc, char* argv[])
 
             if(!line.empty())
             {
-                linenoiseHistoryAdd(line.c_str());
-                
-                // parse and execute a command.
-                std::cout << line << "\n";
+                auto args = po::split_unix(line);
+                if(args.empty())
+                    continue;
 
+                bool command_found = false;
+                for(auto& cmd : global.commands)
+                {
+                    if(cmd->name == args[0])
+                    {
+                        linenoiseHistoryAdd(line.c_str());
+
+                        auto cmd_args = args;
+                        cmd_args.erase(cmd_args.begin());
+                        
+                        try
+                        {
+                            cmd->execute(cmd_args);
+                        }
+                        catch(const std::exception& e)
+                        {
+                            print_exception(e);
+                        }
+                        command_found = true;
+                    }
+                }
+                
+                if(!command_found)
+                    std::cout << "error: Unrecognised command.\n";
             }
         }
     }
