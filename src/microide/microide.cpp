@@ -74,10 +74,14 @@ microide> blah commands
 
 
 microide --create blah
+> ls
+CMakeLists.txt
+cmake
+README.md
 > mkdir src
 > cd src
 > pwd
-/src
+src
 > mktarget --type executable test
 > 
 
@@ -378,6 +382,87 @@ struct ls : command
     }
 };
 
+struct mktarget : command
+{
+    po::positional_options_description p;
+
+    mktarget()
+     : command("mktarget")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("name", po::value<std::string>()->required(), "Name")
+            ("type", po::value<std::string>()->required(), "Type {executable / shared_library / static_library}")
+            ("label", po::value<std::string>(), "Label")
+            ("output_name", po::value<std::string>(), "Output name")
+            ("version", po::value<std::string>(), "Version")
+            ("source,c", po::value<std::vector<std::string>>(), "Source file")
+            ("define,D", po::value<std::vector<std::string>>(), "Definition")
+            ("include,I", po::value<std::vector<std::string>>(), "Include")
+            ("cflags", po::value<std::string>(), "Compile flags")
+            ("ldflags", po::value<std::string>(), "Link flags")
+            ("lib,l", po::value<std::vector<std::string>>(), "Libraries")
+            ("pkg", po::value<std::vector<std::string>>(), "Packages")
+        ;
+        p.add("name", 1);
+    }
+    
+    std::vector<std::string> completion(const std::vector<std::string>&) override
+    {
+        return {};
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        fs::path path = fs::current_path();
+        auto name = vm["name"].as<std::string>();
+        auto type = [](const std::string& token) -> cmake::config::target_t::type_t
+        {
+            if(token == "executable")
+                return cmake::config::target_t::executable;
+            else if(token == "shared_library")
+                return cmake::config::target_t::shared_library;
+            else if(token == "static_library")
+                return cmake::config::target_t::static_library;
+
+            throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
+        }(vm["type"].as<std::string>());
+        
+        auto source_dir = global.project->directory(path);
+        auto target = source_dir.target_add(name, type);
+        
+        if(vm.count("label"))
+            target.label(vm["label"].as<std::string>());
+        if(vm.count("output_name"))
+            target.output_name(vm["output_name"].as<std::string>());
+// todo
+//            ("version", po::value<std::string>(), "Version")
+//            ("source,c", po::value<std::vector<std::string>>(), "Source file")
+//            ("define,D", po::value<std::vector<std::string>>(), "Definition")
+//            ("include,I", po::value<std::vector<std::string>>(), "Include")
+//            ("cflags", po::value<std::string>(), "Compile flags")
+//            ("ldflags", po::value<std::string>(), "Link flags")
+//            ("lib,l", po::value<std::vector<std::string>>(), "Libraries")
+//            ("pkg", po::value<std::vector<std::string>>(), "Packages")
+        
+        global.project->write_config();
+    }
+    
+    virtual ~mktarget()
+    {
+    }
+};
+
 }
 
 void completion(const char* raw, linenoiseCompletions* lc)
@@ -472,6 +557,7 @@ int main(int argc, char* argv[])
         global.commands.push_back(std::make_shared<commands::cd>());
         global.commands.push_back(std::make_shared<commands::pwd>());
         global.commands.push_back(std::make_shared<commands::ls>());
+        global.commands.push_back(std::make_shared<commands::mktarget>());
 
         while(auto raw = linenoise("microide> "))
         {
@@ -527,46 +613,17 @@ int main(int argc, char* argv[])
 namespace commands
 {
 
-//int create_dir(const std::vector<std::string>& args)
-//{
-//    fs::path path = vm["path"].as<std::string>();
-//    fs::path build_path;
-//    if(vm.count("build-path"))
-//        build_path = vm["build-path"].as<std::string>();
-//    auto name = vm["name"].as<std::string>();
-
-//    auto project = project::open(path, build_path);
-
-//    project.directory_create(path / name);
-//    project.write_config();
-
-//    return 0;
-//}
-
 //int create_target(const std::vector<std::string>& args)
 //{
 //    fs::path path = vm["path"].as<std::string>();
 //    fs::path build_path;
 //    if(vm.count("build-path"))
 //        build_path = vm["build-path"].as<std::string>();
-//    auto name = vm["name"].as<std::string>();
-//    auto type = [](const std::string& token) -> cmake::config::target_t::type_t
-//    {
-//        if(token == "executable")
-//            return cmake::config::target_t::executable;
-//        else if(token == "shared_library")
-//            return cmake::config::target_t::shared_library;
-//        else if(token == "static_library")
-//            return cmake::config::target_t::static_library;
 
-//        throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
-//    }(vm["type"].as<std::string>());
 
 //    auto project = project::open(path, build_path);
 
-//    auto source_dir = project.directory(path);
-//    source_dir.target_add(name, type);
-//    project.write_config();
+
 
 //    return 0;
 //}
