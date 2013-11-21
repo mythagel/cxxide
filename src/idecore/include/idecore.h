@@ -52,6 +52,7 @@ private:
 public:
 
     std::string name() const;
+    boost::filesystem::path root() const;
 
 //    // dvcs
 //    push();

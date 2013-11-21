@@ -45,6 +45,10 @@ std::string project_t::name() const
 {
     return config.name();
 }
+fs::path project_t::root() const
+{
+    return config.root();
+}
 
 bool project_t::managed() const
 {
