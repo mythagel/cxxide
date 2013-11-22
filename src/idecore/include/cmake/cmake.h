@@ -67,6 +67,7 @@ struct target_t
         int patch;
 
         version_t();
+        explicit version_t(const std::string& v);
         version_t(int major, int minor, int patch);
 
         bool empty() const;

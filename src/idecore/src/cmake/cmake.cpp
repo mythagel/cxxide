@@ -30,6 +30,8 @@
 #include "listwriter.h"
 #include "listreader.h"
 #include <boost/filesystem/fstream.hpp>
+#include <cstdlib>
+#include <stdexcept>
 
 // Glibc defines these unwanted macros
 #undef major
@@ -69,8 +71,35 @@ target_t::version_t::version_t()
  : major(), minor(), patch()
 {
 }
+target_t::version_t::version_t(const std::string& v)
+ : major(), minor(), patch()
+{
+    auto str = v.c_str();
+    char* str_end(nullptr);
 
+    major = std::strtol(str, &str_end, 10);
+    if(str == str_end) throw std::invalid_argument("unable to parse major version");
 
+    if(*str_end == '\0') return;
+    if(*str_end != '.') throw std::invalid_argument("expected '.'");
+    ++str_end;
+    if(*str_end == '\0') throw std::invalid_argument("expected minor version");
+    str = str_end;
+
+    minor = std::strtol(str, &str_end, 10);
+    if(str == str_end) throw std::invalid_argument("unable to parse minor version");
+
+    if(*str_end == '\0') return;
+    if(*str_end != '.') throw std::invalid_argument("expected '.'");
+    ++str_end;
+    if(*str_end == '\0') throw std::invalid_argument("expected patch version");
+    str = str_end;
+
+    patch = std::strtol(str, &str_end, 10);
+    if(str == str_end) throw std::invalid_argument("unable to parse patch version");
+
+    if(*str_end != '\0') throw std::invalid_argument("expected eof");
+}
 target_t::version_t::version_t(int major, int minor, int patch)
  : major(major), minor(minor), patch(patch)
 {
