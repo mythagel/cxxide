@@ -538,12 +538,15 @@ void project_t::directory_remove(boost::filesystem::path path)
                 });
 
             if(it == end(cur.get().subdirectories))
-                throw error(path.native() + " : Not found");
+                throw error(path.native() + " : not managed");
 
             ++dir;
 
             if(dir == end(path))
+            {
                 cur.get().subdirectories.erase(it);
+                return;
+            }
         }
 
         throw error("Cannot remove top level directory.");
