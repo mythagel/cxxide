@@ -516,7 +516,41 @@ directory_t project_t::directory_create(fs::path path)
     }
     catch(...)
     {
-        std::throw_with_nested(error("cmake::write failed"));
+        std::throw_with_nested(error("cmake::directory_create failed"));
+    }
+}
+
+void project_t::directory_remove(boost::filesystem::path path)
+{
+    using std::begin;
+    using std::end;
+    path = make_relative(source_path, path);
+
+    try
+    {
+        auto cur = std::ref(configuration.directory);
+        for(auto dir = begin(path); dir != end(path); )
+        {
+            auto it = find_if(begin(cur.get().subdirectories), end(cur.get().subdirectories),
+                [&dir](const std::pair<std::string, config::directory_t>& e) -> bool
+                {
+                    return e.first == dir->native();
+                });
+
+            if(it == end(cur.get().subdirectories))
+                throw error(path.native() + " : Not found");
+
+            ++dir;
+
+            if(dir == end(path))
+                cur.get().subdirectories.erase(it);
+        }
+
+        throw error("Cannot remove top level directory.");
+    }
+    catch(...)
+    {
+        std::throw_with_nested(error("cmake::directory_remove failed"));
     }
 }
 

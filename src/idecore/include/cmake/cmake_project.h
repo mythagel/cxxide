@@ -173,6 +173,8 @@ public:
      * Note that the configuration will need to be written after this operation */
     directory_t directory_create(boost::filesystem::path path);
 
+    void directory_remove(boost::filesystem::path path);
+
     /* Retrieve the directory entry for the given canonical, relative path.
      * It is an error to attempt to retrieve a path that does not exist. */
     directory_t directory(boost::filesystem::path path = {});
