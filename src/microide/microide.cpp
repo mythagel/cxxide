@@ -80,13 +80,13 @@ auto parse_target_type(const std::string& token) -> cmake::config::target_t::typ
     throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
 }
 
-enum class target_param_action
+enum class param_action
 {
     set,
     append,
     remove
 };
-auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_param_action action = target_param_action::set) -> void
+auto set_target_params(po::variables_map& vm, cmake::target_t& target, param_action action = param_action::set) -> void
 {
     if(vm.count("type"))
         target.type(parse_target_type(vm["type"].as<std::string>()));
@@ -95,11 +95,11 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto label = vm["label"].as<std::string>();
         switch(action)
         {
-            case target_param_action::set:
-            case target_param_action::append:
+            case param_action::set:
+            case param_action::append:
                 target.label(label);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 target.label({});
                 break;
         }
@@ -109,11 +109,11 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto output_name = vm["output_name"].as<std::string>();
         switch(action)
         {
-            case target_param_action::set:
-            case target_param_action::append:
+            case param_action::set:
+            case param_action::append:
                 target.output_name(output_name);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 target.output_name({});
                 break;
         }
@@ -124,11 +124,11 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto output_name = vm["output_name"].as<std::string>();
         switch(action)
         {
-            case target_param_action::set:
-            case target_param_action::append:
+            case param_action::set:
+            case param_action::append:
                 target.version(version);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 target.version({});
                 break;
         }
@@ -138,14 +138,14 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto sources = vm["source"].as<std::vector<std::string>>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.sources(sources);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 for(auto& source : sources)
                     target.source_add(source);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 for(auto& source : sources)
                     target.source_remove(source);
                 break;
@@ -156,14 +156,14 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto definitions = vm["define"].as<std::vector<std::string>>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.definitions(definitions);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 for(auto& define : definitions)
                     target.definition_add(define);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 for(auto& define : definitions)
                     target.definition_remove(define);
                 break;
@@ -174,14 +174,14 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto includes = vm["include"].as<std::vector<std::string>>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.includes(includes);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 for(auto& include : includes)
                     target.include_add(include);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 for(auto& include : includes)
                     target.include_remove(include);
                 break;
@@ -192,13 +192,13 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto cflags = vm["cflags"].as<std::string>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.compile_flags(cflags);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 target.compile_flags(target.compile_flags() + " " + cflags);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 target.compile_flags({});
                 break;
         }
@@ -208,13 +208,13 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto ldflags = vm["ldflags"].as<std::string>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.link_flags(ldflags);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 target.link_flags(target.link_flags() + " " + ldflags);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 target.link_flags({});
                 break;
         }
@@ -224,14 +224,14 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto libs = vm["lib"].as<std::vector<std::string>>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.libs(libs);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 for(auto& lib : libs)
                     target.lib_add(lib);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 for(auto& lib : libs)
                     target.lib_remove(lib);
                 break;
@@ -242,14 +242,14 @@ auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_pa
         auto packages = vm["pkg"].as<std::vector<std::string>>();
         switch(action)
         {
-            case target_param_action::set:
+            case param_action::set:
                 target.packages(packages);
                 break;
-            case target_param_action::append:
+            case param_action::append:
                 for(auto& package : packages)
                     target.package_add(package);
                 break;
-            case target_param_action::remove:
+            case param_action::remove:
                 for(auto& package : packages)
                     target.package_remove(package);
                 break;
@@ -438,6 +438,9 @@ struct dir : command
             ("include,I", po::value<std::vector<std::string>>(), "Include")
             ("cflags", po::value<std::string>(), "C Compile flags")
             ("cxxflags", po::value<std::string>(), "C++ Compile flags")
+            ("set", "Set parameter (default)")
+            ("append", "Append to multivalue parameters")
+            ("remove", "Remove value from multivalue parameters")
         ;
         p.add("path", 1);
     }
@@ -508,14 +511,83 @@ struct dir : command
 
         auto source_dir = global.project->directory(path);
 
+        param_action action = param_action::set;
+
+        if(vm.count("set"))
+            action = param_action::set;
+        else if(vm.count("append"))
+            action = param_action::append;
+        else if(vm.count("remove"))
+            action = param_action::remove;
+
         if(vm.count("define"))
-            source_dir.definitions(vm["define"].as<std::vector<std::string>>());
+        {
+            auto definitions = vm["define"].as<std::vector<std::string>>();
+            switch(action)
+            {
+                case param_action::set:
+                    source_dir.definitions(definitions);
+                    break;
+                case param_action::append:
+                    for(auto& define : definitions)
+                        source_dir.definition_add(define);
+                    break;
+                case param_action::remove:
+                    for(auto& define : definitions)
+                        source_dir.definition_remove(define);
+                    break;
+            }
+        }
         if(vm.count("include"))
-            source_dir.includes(vm["include"].as<std::vector<std::string>>());
+        {
+            auto includes = vm["include"].as<std::vector<std::string>>();
+            switch(action)
+            {
+                case param_action::set:
+                    source_dir.includes(includes);
+                    break;
+                case param_action::append:
+                    for(auto& include : includes)
+                        source_dir.include_add(include);
+                    break;
+                case param_action::remove:
+                    for(auto& include : includes)
+                        source_dir.include_remove(include);
+                    break;
+            }
+        }
         if(vm.count("cflags"))
-            source_dir.compile_flags_c(vm["cflags"].as<std::string>());
+        {
+            auto cflags = vm["cflags"].as<std::string>();
+            switch(action)
+            {
+                case param_action::set:
+                    source_dir.compile_flags_c(cflags);
+                    break;
+                case param_action::append:
+                    source_dir.compile_flags_c(source_dir.compile_flags_c() + " " + cflags);
+                    break;
+                case param_action::remove:
+                    source_dir.compile_flags_c({});
+                    break;
+            }
+        }
         if(vm.count("cxxflags"))
-            source_dir.compile_flags_cxx(vm["cxxflags"].as<std::string>());
+        {
+            auto cxxflags = vm["cxxflags"].as<std::string>();
+            switch(action)
+            {
+                case param_action::set:
+                    source_dir.compile_flags_cxx(cxxflags);
+                    break;
+                case param_action::append:
+                    source_dir.compile_flags_cxx(source_dir.compile_flags_cxx() + " " + cxxflags);
+                    break;
+                case param_action::remove:
+                    source_dir.compile_flags_cxx({});
+                    break;
+            }
+        }
 
 // TODO in file  command.
 //std::vector<configure_file_t> configure_files;
@@ -1054,13 +1126,13 @@ struct target : command
 
         auto target = source_dir.target_get(name);
         if(vm.count("set"))
-            set_target_params(vm, target, target_param_action::set);
+            set_target_params(vm, target, param_action::set);
         else if(vm.count("append"))
-            set_target_params(vm, target, target_param_action::append);
+            set_target_params(vm, target, param_action::append);
         else if(vm.count("remove"))
-            set_target_params(vm, target, target_param_action::remove);
+            set_target_params(vm, target, param_action::remove);
         else    // default: set
-            set_target_params(vm, target, target_param_action::set);
+            set_target_params(vm, target, param_action::set);
 
         global.project->write_config();
 
@@ -1156,7 +1228,7 @@ try
     {
         // list out top level commands.
         for(auto& cmd : global.commands)
-            linenoiseAddCompletion(lc, cmd->name.c_str());
+            linenoiseAddCompletion(lc, (cmd->name + " ").c_str());
         return;
     }
 
@@ -1180,7 +1252,7 @@ try
         }
         else if(cmd->name.find(args[0]) == 0)
         {
-            linenoiseAddCompletion(lc, cmd->name.c_str());
+            linenoiseAddCompletion(lc, (cmd->name + " ").c_str());
         }
     }
 }
@@ -1294,26 +1366,6 @@ int main(int argc, char* argv[])
         print_exception(e);
         return 1;
     }
-}
-
-namespace commands
-{
-
-//int create_target(const std::vector<std::string>& args)
-//{
-//    fs::path path = vm["path"].as<std::string>();
-//    fs::path build_path;
-//    if(vm.count("build-path"))
-//        build_path = vm["build-path"].as<std::string>();
-
-
-//    auto project = project::open(path, build_path);
-
-
-
-//    return 0;
-//}
-
 }
 
 void print_exception(const std::exception& e, int level)
