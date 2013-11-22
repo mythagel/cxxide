@@ -300,18 +300,42 @@ std::vector<std::string> directory_t::definitions() const
 {
     return directory.get().definitions;
 }
-void directory_t::definitions(const std::vector<std::string>& defs)
+void directory_t::definitions(const std::vector<std::string>& definitions)
 {
-    directory.get().definitions = defs;
+    directory.get().definitions = definitions;
+}
+void directory_t::definition_add(const std::string& define)
+{
+    auto& definitions = directory.get().definitions;
+    if(std::count(begin(definitions), end(definitions), define))
+        throw error("define exists");
+    definitions.push_back(define);
+}
+void directory_t::definition_remove(const std::string& define)
+{
+    auto& definitions = directory.get().definitions;
+    definitions.erase(std::remove(begin(definitions), end(definitions), define), end(definitions));
 }
 
 std::vector<std::string> directory_t::includes() const
 {
     return directory.get().includes;
 }
-void directory_t::includes(const std::vector<std::string>& incls)
+void directory_t::includes(const std::vector<std::string>& includes)
 {
-    directory.get().includes = incls;
+    directory.get().includes = includes;
+}
+void directory_t::include_add(const std::string& include)
+{
+    auto& includes = directory.get().includes;
+    if(std::count(begin(includes), end(includes), include))
+        throw error("include exists");
+    includes.push_back(include);
+}
+void directory_t::include_remove(const std::string& include)
+{
+    auto& includes = directory.get().includes;
+    includes.erase(std::remove(begin(includes), end(includes), include), end(includes));
 }
 
 std::string directory_t::compile_flags_cxx() const

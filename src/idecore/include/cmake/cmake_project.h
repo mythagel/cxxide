@@ -119,10 +119,14 @@ public:
     directory_t(config::configuration_t& configuration, config::directory_t& directory);
 
     std::vector<std::string> definitions() const;
-    void definitions(const std::vector<std::string>& defs);
+    void definitions(const std::vector<std::string>& definitions);
+    void definition_add(const std::string& define);
+    void definition_remove(const std::string& define);
 
     std::vector<std::string> includes() const;
-    void includes(const std::vector<std::string>& incls);
+    void includes(const std::vector<std::string>& includes);
+    void include_add(const std::string& include);
+    void include_remove(const std::string& include);
 
     std::string compile_flags_cxx() const;
     std::string compile_flags_c() const;
