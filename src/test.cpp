@@ -146,6 +146,25 @@ std::string str(const configuration_t& config)
 
 int main(int argc, char* argv[])
 {
+    {
+        //target_t::version_t t1("");
+        //target_t::version_t t2(".");
+        target_t::version_t t3("1");
+        //target_t::version_t t4("a");
+        //target_t::version_t t5("1.");
+        //target_t::version_t t6("a.");
+        target_t::version_t t7("1.3");
+        //target_t::version_t t8("1.a");
+        //target_t::version_t t9("1.3.");
+        target_t::version_t ta("1.3.1");
+        //target_t::version_t tb("1.3.a");
+        //target_t::version_t tc("1.a.a");
+        //target_t::version_t td("1.3.1.");
+        //target_t::version_t te("1.3.1.a");
+        //target_t::version_t tf("1.3.1.3");
+        //target_t::version_t tg("1.3.1.3a");
+    }
+
     std::vector<std::string> args(argv, argv + argc);
     args.erase(args.begin());
     
