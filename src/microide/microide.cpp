@@ -46,23 +46,26 @@ bool is_child_of(const fs::path& child, const fs::path& path)
 }
 
 // Return path when appended to a_From will resolve to same as a_To
-boost::filesystem::path make_relative( boost::filesystem::path a_From, boost::filesystem::path a_To )
+boost::filesystem::path make_relative( boost::filesystem::path from, boost::filesystem::path to )
 {
-    a_From = boost::filesystem::absolute( a_From ); a_To = boost::filesystem::absolute( a_To );
-    boost::filesystem::path ret;
-    boost::filesystem::path::const_iterator itrFrom( a_From.begin() ), itrTo( a_To.begin() );
+    from = absolute(from);
+    to = absolute(to);
+    fs::path relative;
+
+    auto itrFrom = from.begin();
+    auto itrTo = to.begin();
     // Find common base
-    for( boost::filesystem::path::const_iterator toEnd( a_To.end() ), fromEnd( a_From.end() ) ; itrFrom != fromEnd && itrTo != toEnd && *itrFrom == *itrTo; ++itrFrom, ++itrTo );
+    for( ; itrFrom != from.end() && itrTo != to.end() && *itrFrom == *itrTo; ++itrFrom, ++itrTo );
     // Navigate backwards in directory to reach previously found base
-    for( boost::filesystem::path::const_iterator fromEnd( a_From.end() ); itrFrom != fromEnd; ++itrFrom )
+    for( ; itrFrom != from.end(); ++itrFrom )
     {
         if( (*itrFrom) != "." )
-            ret /= "..";
+            relative /= "..";
     }
     // Now navigate down the directory branch
-    for( ; itrTo != a_To.end() ; ++itrTo )
-        ret /= *itrTo;
-    return ret;
+    for( ; itrTo != to.end() ; ++itrTo )
+        relative /= *itrTo;
+    return relative;
 }
 
 }
@@ -153,6 +156,94 @@ struct mkdir : command
     }
     
     virtual ~mkdir()
+    {
+    }
+};
+
+struct rmdir : command
+{
+    po::positional_options_description p;
+
+    rmdir()
+     : command("rmdir")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("name", po::value<std::string>()->value_name("name")->required(), "Directory name")
+        ;
+        p.add("name", 1);
+    }
+    
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
+    {
+        if(args.size() > 1) return {};
+        std::vector<std::string> opts;
+
+        fs::path path = fs::current_path();
+        if(!args.empty())
+            path = path / args[0];
+
+        if(exists(path) && !is_child_of(canonical(absolute(path)), global.project->root()))
+            return {};
+        else if(exists(path.parent_path()) && !is_child_of(canonical(absolute(path.parent_path())), global.project->root()))
+            return {};
+
+        try
+        {
+            if (exists(path) && is_directory(path))
+            {
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    if(is_directory(child))
+                        opts.push_back(make_relative(fs::current_path(), child).native());
+                }
+            }
+            else if(exists(path.parent_path()) && is_directory(path.parent_path()))
+            {
+                std::string partial = path.filename().native();
+                path = path.parent_path();
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    if(is_directory(child))
+                    {
+                        std::string opt = make_relative(fs::current_path(), child).native();
+                        if(child.filename().native().find(partial) == 0)
+                            opts.push_back(opt);
+                    }
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+            print_exception(e);
+        }
+        return opts;
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        auto dir = vm["name"].as<std::string>();
+        fs::path path = fs::current_path() / dir;
+        global.project->directory_remove(path);
+
+        global.project->write_config();
+    }
+    
+    virtual ~rmdir()
     {
     }
 };
@@ -361,13 +452,89 @@ struct ls : command
 
         try
         {
-            if (exists(path) && is_directory(path))
+            try
             {
-                std::vector<fs::path> children;
-                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
-                for(auto& child : children)
+                auto source_dir = global.project->directory(path);
+
+                auto definitions = source_dir.definitions();
+                for(auto& define : definitions)
+                    std::cout << "define: " << define << "\n";
+
+                auto includes = source_dir.includes();
+                for(auto& include : includes)
+                    std::cout << "include: " << include << "\n";
+
+                if(!source_dir.compile_flags_cxx().empty())
+                    std::cout << "cxxflags: " << source_dir.compile_flags_cxx() << "\n";
+
+                if(!source_dir.compile_flags_c().empty())
+                    std::cout << "cflags: " << source_dir.compile_flags_c() << "\n";
+
+                auto configure_files = source_dir.configure_files();
+                auto files = source_dir.files();
+
+                auto targets = source_dir.targets();
+                for(auto& target : targets)
+                    std::cout << "target: " << target.name << "\n";
+
+                auto subdirectories = source_dir.subdirectories();
+
+                if (exists(path) && is_directory(path))
                 {
-                    std::cout << make_relative(fs::current_path(), child).native() << "\n";
+                    std::vector<fs::path> children;
+                    std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                    for(auto& child : children)
+                    {
+                        auto child_path = make_relative(fs::current_path(), child);
+                        bool written(false);
+                        if(is_directory(child))
+                        {
+                            for(auto& dir : subdirectories)
+                            {
+                                if(dir == child_path.filename().native())
+                                {
+                                    std::cout << "* " << child_path.native() << "\n";
+                                    written = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for(auto& cf : configure_files)
+                            {
+                                if(cf.input == child_path.filename().native())
+                                {
+                                    std::cout << "  " << child_path.native() << " -> " << cf.output << "\n";
+                                    written = true;
+                                }
+                            }
+                            for(auto& f : files)
+                            {
+                                if(f.name == child_path.filename().native())
+                                {
+                                    std::cout << "* " << child_path.native() << "\n";
+                                    written = true;
+                                }
+                            }
+                        }
+
+                        if(!written)
+                            std::cout << "  " << child_path.native() << "\n";
+                    }
+                }
+            }
+            catch(const cmake::error& e)
+            {
+                /* path is not a source directory.
+                 * fallback to standard directory listing. */
+                if (exists(path) && is_directory(path))
+                {
+                    std::vector<fs::path> children;
+                    std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                    for(auto& child : children)
+                    {
+                        std::cout << make_relative(fs::current_path(), child).native() << "\n";
+                    }
                 }
             }
         }
@@ -392,7 +559,8 @@ struct mktarget : command
         options.add_options()
             ("help", "display this help and exit")
             ("name", po::value<std::string>()->required(), "Name")
-            ("type", po::value<std::string>()->required(), "Type {executable / shared_library / static_library}")
+            ("update", "Update existing target")
+            ("type", po::value<std::string>(), "Type {executable / shared_library / static_library}")
             ("label", po::value<std::string>(), "Label")
             ("output_name", po::value<std::string>(), "Output name")
             ("version", po::value<std::string>(), "Version")
@@ -426,7 +594,9 @@ struct mktarget : command
 
         fs::path path = fs::current_path();
         auto name = vm["name"].as<std::string>();
-        auto type = [](const std::string& token) -> cmake::config::target_t::type_t
+        auto source_dir = global.project->directory(path);
+
+        auto parse_type = [](const std::string& token) -> cmake::config::target_t::type_t
         {
             if(token == "executable")
                 return cmake::config::target_t::executable;
@@ -436,29 +606,98 @@ struct mktarget : command
                 return cmake::config::target_t::static_library;
 
             throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
-        }(vm["type"].as<std::string>());
-        
-        auto source_dir = global.project->directory(path);
-        auto target = source_dir.target_add(name, type);
-        
-        if(vm.count("label"))
-            target.label(vm["label"].as<std::string>());
-        if(vm.count("output_name"))
-            target.output_name(vm["output_name"].as<std::string>());
-// todo
-//            ("version", po::value<std::string>(), "Version")
-//            ("source,c", po::value<std::vector<std::string>>(), "Source file")
-//            ("define,D", po::value<std::vector<std::string>>(), "Definition")
-//            ("include,I", po::value<std::vector<std::string>>(), "Include")
-//            ("cflags", po::value<std::string>(), "Compile flags")
-//            ("ldflags", po::value<std::string>(), "Link flags")
-//            ("lib,l", po::value<std::vector<std::string>>(), "Libraries")
-//            ("pkg", po::value<std::vector<std::string>>(), "Packages")
-        
+        };
+
+        auto set_target_params = [&vm, &parse_type](cmake::target_t& target)
+        {
+            if(vm.count("type"))
+                target.type(parse_type(vm["type"].as<std::string>()));
+            if(vm.count("label"))
+                target.label(vm["label"].as<std::string>());
+            if(vm.count("output_name"))
+                target.output_name(vm["output_name"].as<std::string>());
+            if(vm.count("version"))
+                target.version(cmake::config::target_t::version_t(vm["version"].as<std::string>()));
+            if(vm.count("source"))
+                target.sources(vm["source"].as<std::vector<std::string>>());
+            if(vm.count("define"))
+                target.definitions(vm["define"].as<std::vector<std::string>>());
+            if(vm.count("include"))
+                target.includes(vm["include"].as<std::vector<std::string>>());
+            if(vm.count("cflags"))
+                target.compile_flags(vm["cflags"].as<std::string>());
+            if(vm.count("ldflags"))
+                target.link_flags(vm["ldflags"].as<std::string>());
+            if(vm.count("lib"))
+                target.libs(vm["lib"].as<std::vector<std::string>>());
+            if(vm.count("pkg"))
+                target.packages(vm["pkg"].as<std::vector<std::string>>());
+        };
+
+        if(vm.count("update"))
+        {
+            auto target = source_dir.target_get(name);
+            set_target_params(target);
+        }
+        else
+        {
+            if(!vm.count("type"))
+                throw po::validation_error(po::validation_error::at_least_one_value_required, "type");
+
+            auto type = parse_type(vm["type"].as<std::string>());
+            auto target = source_dir.target_add(name, type);
+            set_target_params(target);
+        }
+
         global.project->write_config();
     }
     
     virtual ~mktarget()
+    {
+    }
+};
+
+struct rmtarget : command
+{
+    po::positional_options_description p;
+
+    rmtarget()
+     : command("rmtarget")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("name", po::value<std::string>()->required(), "Name")
+        ;
+        p.add("name", 1);
+    }
+    
+    std::vector<std::string> completion(const std::vector<std::string>&) override
+    {
+        return {};
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        fs::path path = fs::current_path();
+        auto name = vm["name"].as<std::string>();
+
+        auto source_dir = global.project->directory(path);
+        source_dir.target_remove(name);
+
+        global.project->write_config();
+    }
+    
+    virtual ~rmtarget()
     {
     }
 };
@@ -554,10 +793,12 @@ int main(int argc, char* argv[])
         current_path(path);
 
         global.commands.push_back(std::make_shared<commands::mkdir>());
+        global.commands.push_back(std::make_shared<commands::rmdir>());
         global.commands.push_back(std::make_shared<commands::cd>());
         global.commands.push_back(std::make_shared<commands::pwd>());
         global.commands.push_back(std::make_shared<commands::ls>());
         global.commands.push_back(std::make_shared<commands::mktarget>());
+        global.commands.push_back(std::make_shared<commands::rmtarget>());
 
         while(auto raw = linenoise("microide> "))
         {
