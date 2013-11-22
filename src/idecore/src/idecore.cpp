@@ -69,6 +69,11 @@ cmake::directory_t project_t::directory_create(const fs::path& path)
     return config.directory_create(path);
 }
 
+void project_t::directory_remove(boost::filesystem::path path)
+{
+    config.directory_remove(path);
+}
+
 cmake::directory_t project_t::directory(const fs::path& path)
 {
     return config.directory(path);
