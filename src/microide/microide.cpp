@@ -68,6 +68,270 @@ boost::filesystem::path make_relative( boost::filesystem::path from, boost::file
     return relative;
 }
 
+auto parse_target_type(const std::string& token) -> cmake::config::target_t::type_t
+{
+    if(token == "executable")
+        return cmake::config::target_t::executable;
+    else if(token == "shared_library")
+        return cmake::config::target_t::shared_library;
+    else if(token == "static_library")
+        return cmake::config::target_t::static_library;
+
+    throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
+}
+
+enum class target_param_action
+{
+    set,
+    append,
+    remove
+};
+auto set_target_params(po::variables_map& vm, cmake::target_t& target, target_param_action action = target_param_action::set) -> void
+{
+    if(vm.count("type"))
+        target.type(parse_target_type(vm["type"].as<std::string>()));
+    if(vm.count("label"))
+    {
+        auto label = vm["label"].as<std::string>();
+        switch(action)
+        {
+            case target_param_action::set:
+            case target_param_action::append:
+                target.label(label);
+                break;
+            case target_param_action::remove:
+                target.label({});
+                break;
+        }
+    }
+    if(vm.count("output_name"))
+    {
+        auto output_name = vm["output_name"].as<std::string>();
+        switch(action)
+        {
+            case target_param_action::set:
+            case target_param_action::append:
+                target.output_name(output_name);
+                break;
+            case target_param_action::remove:
+                target.output_name({});
+                break;
+        }
+    }
+    if(vm.count("version"))
+    {
+        auto version = cmake::config::target_t::version_t(vm["version"].as<std::string>());
+        auto output_name = vm["output_name"].as<std::string>();
+        switch(action)
+        {
+            case target_param_action::set:
+            case target_param_action::append:
+                target.version(version);
+                break;
+            case target_param_action::remove:
+                target.version({});
+                break;
+        }
+    }
+    if(vm.count("source"))
+    {
+        auto sources = vm["source"].as<std::vector<std::string>>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.sources(sources);
+                break;
+            case target_param_action::append:
+                for(auto& source : sources)
+                    target.source_add(source);
+                break;
+            case target_param_action::remove:
+                for(auto& source : sources)
+                    target.source_remove(source);
+                break;
+        }
+    }
+    if(vm.count("define"))
+    {
+        auto definitions = vm["define"].as<std::vector<std::string>>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.definitions(definitions);
+                break;
+            case target_param_action::append:
+                for(auto& define : definitions)
+                    target.definition_add(define);
+                break;
+            case target_param_action::remove:
+                for(auto& define : definitions)
+                    target.definition_remove(define);
+                break;
+        }
+    }
+    if(vm.count("include"))
+    {
+        auto includes = vm["include"].as<std::vector<std::string>>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.includes(includes);
+                break;
+            case target_param_action::append:
+                for(auto& include : includes)
+                    target.include_add(include);
+                break;
+            case target_param_action::remove:
+                for(auto& include : includes)
+                    target.include_remove(include);
+                break;
+        }
+    }
+    if(vm.count("cflags"))
+    {
+        auto cflags = vm["cflags"].as<std::string>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.compile_flags(cflags);
+                break;
+            case target_param_action::append:
+                target.compile_flags(target.compile_flags() + " " + cflags);
+                break;
+            case target_param_action::remove:
+                target.compile_flags({});
+                break;
+        }
+    }
+    if(vm.count("ldflags"))
+    {
+        auto ldflags = vm["ldflags"].as<std::string>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.link_flags(ldflags);
+                break;
+            case target_param_action::append:
+                target.link_flags(target.link_flags() + " " + ldflags);
+                break;
+            case target_param_action::remove:
+                target.link_flags({});
+                break;
+        }
+    }
+    if(vm.count("lib"))
+    {
+        auto libs = vm["lib"].as<std::vector<std::string>>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.libs(libs);
+                break;
+            case target_param_action::append:
+                for(auto& lib : libs)
+                    target.lib_add(lib);
+                break;
+            case target_param_action::remove:
+                for(auto& lib : libs)
+                    target.lib_remove(lib);
+                break;
+        }
+    }
+    if(vm.count("pkg"))
+    {
+        auto packages = vm["pkg"].as<std::vector<std::string>>();
+        switch(action)
+        {
+            case target_param_action::set:
+                target.packages(packages);
+                break;
+            case target_param_action::append:
+                for(auto& package : packages)
+                    target.package_add(package);
+                break;
+            case target_param_action::remove:
+                for(auto& package : packages)
+                    target.package_remove(package);
+                break;
+        }
+    }
+}
+
+std::string str(const cmake::target_t& target)
+{
+    std::stringstream s;
+
+    s << "target: " << target.name() << "\n";
+
+    if(!target.label().empty())
+        s << "label: " << target.label() << "\n";
+
+    if(!target.output_name().empty())
+        s << "output_name: " << target.output_name() << "\n";
+
+    switch(target.type())
+    {
+        case cmake::config::target_t::executable:
+            s << "type: executable\n";
+            break;
+        case cmake::config::target_t::shared_library:
+            s << "type: shared library\n";
+            break;
+        case cmake::config::target_t::static_library:
+            s << "type: static library\n";
+            break;
+    }
+    if(!target.version().empty())
+        s << "version: " << target.version().major << "." << target.version().minor << "." << target.version().patch << "\n";
+
+    if(!target.sources().empty())
+    {
+        auto sources = target.sources();
+        s << "sources: ";
+        std::copy(begin(sources), end(sources), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+
+    if(!target.definitions().empty())
+    {
+        auto definitions = target.definitions();
+        s << "definitions: ";
+        std::copy(begin(definitions), end(definitions), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+
+    if(!target.includes().empty())
+    {
+        auto includes = target.includes();
+        s << "includes: ";
+        std::copy(begin(includes), end(includes), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+
+    if(!target.compile_flags().empty())
+        s << "compile_flags: " << target.compile_flags() << "\n";
+    if(!target.link_flags().empty())
+        s << "link_flags: " << target.link_flags() << "\n";
+
+    if(!target.libs().empty())
+    {
+        auto libs = target.libs();
+        s << "libs: ";
+        std::copy(begin(libs), end(libs), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+
+    if(!target.packages().empty())
+    {
+        auto packages = target.packages();
+        s << "packages: ";
+        std::copy(begin(packages), end(packages), std::ostream_iterator<std::string>(s, ", "));
+        s << "\n";
+    }
+
+    return s.str();
+}
+
 }
 
 /*
@@ -160,6 +424,110 @@ struct mkdir : command
     }
 };
 
+struct dir : command
+{
+    po::positional_options_description p;
+
+    dir()
+     : command("dir")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("path", po::value<std::string>()->value_name("name"), "Directory name")
+            ("define,D", po::value<std::vector<std::string>>(), "Definition")
+            ("include,I", po::value<std::vector<std::string>>(), "Include")
+            ("cflags", po::value<std::string>(), "C Compile flags")
+            ("cxxflags", po::value<std::string>(), "C++ Compile flags")
+        ;
+        p.add("path", 1);
+    }
+
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
+    {
+        if(args.size() > 1) return {};
+        std::vector<std::string> opts;
+
+        fs::path path;
+        if(!args.empty())
+            path = global.project->root() / args[0];
+        else
+            path = fs::current_path();
+
+        if(exists(path) && !is_child_of(canonical(absolute(path)), global.project->root()))
+            return {};
+        else if(exists(path.parent_path()) && !is_child_of(canonical(absolute(path.parent_path())), global.project->root()))
+            return {};
+
+        try
+        {
+            if (exists(path) && is_directory(path))
+            {
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    opts.push_back(make_relative(fs::current_path(), child).native());
+                }
+            }
+            else if(exists(path.parent_path()) && is_directory(path.parent_path()))
+            {
+                std::string partial = path.filename().native();
+                path = path.parent_path();
+                std::vector<fs::path> children;
+                std::copy(fs::directory_iterator(path), fs::directory_iterator(), std::back_inserter(children));
+                for(auto& child : children)
+                {
+                    std::string opt = make_relative(fs::current_path(), child).native();
+                    if(child.filename().native().find(partial) == 0)
+                        opts.push_back(opt);
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+            print_exception(e);
+        }
+        return opts;
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        fs::path path = fs::current_path();
+        if(vm.count("path"))
+            path = path / vm["path"].as<std::string>();
+
+        auto source_dir = global.project->directory(path);
+
+        if(vm.count("define"))
+            source_dir.definitions(vm["define"].as<std::vector<std::string>>());
+        if(vm.count("include"))
+            source_dir.includes(vm["include"].as<std::vector<std::string>>());
+        if(vm.count("cflags"))
+            source_dir.compile_flags_c(vm["cflags"].as<std::string>());
+        if(vm.count("cxxflags"))
+            source_dir.compile_flags_cxx(vm["cxxflags"].as<std::string>());
+
+// TODO in file  command.
+//std::vector<configure_file_t> configure_files;
+//std::vector<file_t> files;
+        global.project->write_config();
+    }
+
+    virtual ~dir()
+    {
+    }
+};
+
 struct rmdir : command
 {
     po::positional_options_description p;
@@ -173,7 +541,7 @@ struct rmdir : command
         ;
         p.add("name", 1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
         if(args.size() > 1) return {};
@@ -242,7 +610,7 @@ struct rmdir : command
 
         global.project->write_config();
     }
-    
+
     virtual ~rmdir()
     {
     }
@@ -559,8 +927,7 @@ struct mktarget : command
         options.add_options()
             ("help", "display this help and exit")
             ("name", po::value<std::string>()->required(), "Name")
-            ("update", "Update existing target")
-            ("type", po::value<std::string>(), "Type {executable / shared_library / static_library}")
+            ("type", po::value<std::string>()->required(), "Type {executable / shared_library / static_library}")
             ("label", po::value<std::string>(), "Label")
             ("output_name", po::value<std::string>(), "Output name")
             ("version", po::value<std::string>(), "Version")
@@ -595,64 +962,112 @@ struct mktarget : command
         fs::path path = fs::current_path();
         auto name = vm["name"].as<std::string>();
         auto source_dir = global.project->directory(path);
+        auto type = parse_target_type(vm["type"].as<std::string>());
 
-        auto parse_type = [](const std::string& token) -> cmake::config::target_t::type_t
-        {
-            if(token == "executable")
-                return cmake::config::target_t::executable;
-            else if(token == "shared_library")
-                return cmake::config::target_t::shared_library;
-            else if(token == "static_library")
-                return cmake::config::target_t::static_library;
-
-            throw po::validation_error(po::validation_error::invalid_option_value, "type", token);
-        };
-
-        auto set_target_params = [&vm, &parse_type](cmake::target_t& target)
-        {
-            if(vm.count("type"))
-                target.type(parse_type(vm["type"].as<std::string>()));
-            if(vm.count("label"))
-                target.label(vm["label"].as<std::string>());
-            if(vm.count("output_name"))
-                target.output_name(vm["output_name"].as<std::string>());
-            if(vm.count("version"))
-                target.version(cmake::config::target_t::version_t(vm["version"].as<std::string>()));
-            if(vm.count("source"))
-                target.sources(vm["source"].as<std::vector<std::string>>());
-            if(vm.count("define"))
-                target.definitions(vm["define"].as<std::vector<std::string>>());
-            if(vm.count("include"))
-                target.includes(vm["include"].as<std::vector<std::string>>());
-            if(vm.count("cflags"))
-                target.compile_flags(vm["cflags"].as<std::string>());
-            if(vm.count("ldflags"))
-                target.link_flags(vm["ldflags"].as<std::string>());
-            if(vm.count("lib"))
-                target.libs(vm["lib"].as<std::vector<std::string>>());
-            if(vm.count("pkg"))
-                target.packages(vm["pkg"].as<std::vector<std::string>>());
-        };
-
-        if(vm.count("update"))
-        {
-            auto target = source_dir.target_get(name);
-            set_target_params(target);
-        }
-        else
-        {
-            if(!vm.count("type"))
-                throw po::validation_error(po::validation_error::at_least_one_value_required, "type");
-
-            auto type = parse_type(vm["type"].as<std::string>());
-            auto target = source_dir.target_add(name, type);
-            set_target_params(target);
-        }
+        auto target = source_dir.target_add(name, type);
+        set_target_params(vm, target);
 
         global.project->write_config();
     }
-    
+
     virtual ~mktarget()
+    {
+    }
+};
+
+struct target : command
+{
+    po::positional_options_description p;
+
+    target()
+     : command("target")
+    {
+        options.add_options()
+            ("help", "display this help and exit")
+            ("name", po::value<std::string>()->required(), "Name")
+            ("type", po::value<std::string>(), "Type {executable / shared_library / static_library}")
+            ("label", po::value<std::string>(), "Label")
+            ("output_name", po::value<std::string>(), "Output name")
+            ("version", po::value<std::string>(), "Version")
+            ("source,c", po::value<std::vector<std::string>>(), "Source file")
+            ("define,D", po::value<std::vector<std::string>>(), "Definition")
+            ("include,I", po::value<std::vector<std::string>>(), "Include")
+            ("cflags", po::value<std::string>(), "Compile flags")
+            ("ldflags", po::value<std::string>(), "Link flags")
+            ("lib,l", po::value<std::vector<std::string>>(), "Libraries")
+            ("pkg", po::value<std::vector<std::string>>(), "Packages")
+            ("set", "Set parameter (default)")
+            ("append", "Append to multivalue parameters")
+            ("remove", "Remove value from multivalue parameters")
+        ;
+        p.add("name", 1);
+    }
+
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
+    {
+        if(args.size() > 1) return {};
+        std::vector<std::string> opts;
+
+        try
+        {
+            fs::path path = fs::current_path();
+            auto source_dir = global.project->directory(path);
+
+            auto targets = source_dir.targets();
+
+            if(args.empty())
+            {
+                for(auto& target : targets)
+                    opts.push_back(target.name);
+            }
+            else
+            {
+                auto t = args[0];
+                for(auto& target : targets)
+                {
+                    if(target.name.find(t) == 0)
+                        opts.push_back(target.name);
+                }
+            }
+        }
+        catch(const std::exception&)
+        {
+        }
+        return opts;
+    }
+    void execute(const std::vector<std::string>& args) override
+    {
+        po::variables_map vm;
+        po::store(po::command_line_parser(args).options(options).positional(p).run(), vm);
+
+        if(vm.count("help"))
+        {
+            std::cout << options << "\n";
+            return;
+        }
+
+        po::notify(vm);
+
+        fs::path path = fs::current_path();
+        auto name = vm["name"].as<std::string>();
+        auto source_dir = global.project->directory(path);
+
+        auto target = source_dir.target_get(name);
+        if(vm.count("set"))
+            set_target_params(vm, target, target_param_action::set);
+        else if(vm.count("append"))
+            set_target_params(vm, target, target_param_action::append);
+        else if(vm.count("remove"))
+            set_target_params(vm, target, target_param_action::remove);
+        else    // default: set
+            set_target_params(vm, target, target_param_action::set);
+
+        global.project->write_config();
+
+        std::cout << str(target) << "\n";
+    }
+
+    virtual ~target()
     {
     }
 };
@@ -671,9 +1086,37 @@ struct rmtarget : command
         p.add("name", 1);
     }
     
-    std::vector<std::string> completion(const std::vector<std::string>&) override
+    std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
-        return {};
+        if(args.size() > 1) return {};
+        std::vector<std::string> opts;
+
+        try
+        {
+            fs::path path = fs::current_path();
+            auto source_dir = global.project->directory(path);
+
+            auto targets = source_dir.targets();
+
+            if(args.empty())
+            {
+                for(auto& target : targets)
+                    opts.push_back(target.name);
+            }
+            else
+            {
+                auto t = args[0];
+                for(auto& target : targets)
+                {
+                    if(target.name.find(t) == 0)
+                        opts.push_back(target.name);
+                }
+            }
+        }
+        catch(const std::exception&)
+        {
+        }
+        return opts;
     }
     void execute(const std::vector<std::string>& args) override
     {
@@ -793,11 +1236,13 @@ int main(int argc, char* argv[])
         current_path(path);
 
         global.commands.push_back(std::make_shared<commands::mkdir>());
+        global.commands.push_back(std::make_shared<commands::dir>());
         global.commands.push_back(std::make_shared<commands::rmdir>());
         global.commands.push_back(std::make_shared<commands::cd>());
         global.commands.push_back(std::make_shared<commands::pwd>());
         global.commands.push_back(std::make_shared<commands::ls>());
         global.commands.push_back(std::make_shared<commands::mktarget>());
+        global.commands.push_back(std::make_shared<commands::target>());
         global.commands.push_back(std::make_shared<commands::rmtarget>());
 
         while(auto raw = linenoise("microide> "))
