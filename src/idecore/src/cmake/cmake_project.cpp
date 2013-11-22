@@ -564,11 +564,14 @@ void project_t::directory_remove(boost::filesystem::path path)
             if(it == end(cur.get().subdirectories))
                 throw error(path.native() + " : not managed");
 
+            auto parent = cur;
+            cur = std::ref(it->second);
+
             ++dir;
 
             if(dir == end(path))
             {
-                cur.get().subdirectories.erase(it);
+                parent.get().subdirectories.erase(it);
                 return;
             }
         }
