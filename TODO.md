@@ -83,4 +83,7 @@ cxxide functions and what is required from clang
 User Interface
 =============
 
+CLI interface almost complete.
+Add indexing.
+
 signals as callbacks
