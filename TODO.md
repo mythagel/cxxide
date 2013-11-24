@@ -87,3 +87,8 @@ CLI interface almost complete.
 Add indexing.
 
 signals as callbacks
+
+need to work on interface.
+Single window, calculate enter / exit
+use higher level library - custom widgets.
+
