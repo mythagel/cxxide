@@ -94,3 +94,4 @@ Single window, calculate enter / exit
 use higher level library - custom widgets.
 
 investigate standalone chrome bits to render svg -> svgtk
+very involved - even just embedding chrome - let alone implementing svg on top of an existing canvas library
