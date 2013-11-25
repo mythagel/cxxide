@@ -18,8 +18,9 @@ build CLI versions of the cmake, source, & index libs
  - can start to self host even without the gui.
 
 Need to implement source manager
- * Creates source file(s) from templates
- * Manages licensing
+Creates source file(s) from templates
+Manages licensing
+
 
     ${project_name} ${project_summary}
     ${license}
@@ -30,11 +31,11 @@ Need to implement source manager
      *  Created on: ${datetime}
      *      Author: ${user}
      */
-    
     #ifndef ${include_guard}
     #define ${include_guard}
     
     #endif
+
 
 License generator
  * Need license list
@@ -92,3 +93,4 @@ need to work on interface.
 Single window, calculate enter / exit
 use higher level library - custom widgets.
 
+investigate svgtiny + v8 + cairo -> svgtk
