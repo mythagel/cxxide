@@ -93,4 +93,4 @@ need to work on interface.
 Single window, calculate enter / exit
 use higher level library - custom widgets.
 
-investigate svgtiny + v8 + cairo -> svgtk
+investigate standalone chrome bits to render svg -> svgtk
