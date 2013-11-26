@@ -93,5 +93,7 @@ need to work on interface.
 Single window, calculate enter / exit
 use higher level library - custom widgets.
 
-investigate standalone chrome bits to render svg -> svgtk
-very involved - even just embedding chrome - let alone implementing svg on top of an existing canvas library
+Implement basics of svg on cairo
+(not really svg - e.g. svg core + minidom + v8 script)
+
+then have interactivity and compile to structures (i.e. no runtime parsing)
