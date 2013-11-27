@@ -87,13 +87,4 @@ User Interface
 CLI interface almost complete.
 Add indexing.
 
-signals as callbacks
-
-need to work on interface.
-Single window, calculate enter / exit
-use higher level library - custom widgets.
-
-Implement basics of svg on cairo
-(not really svg - e.g. svg core + minidom + v8 script)
-
-then have interactivity and compile to structures (i.e. no runtime parsing)
+sfml + sfgui
