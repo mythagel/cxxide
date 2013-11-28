@@ -88,3 +88,10 @@ CLI interface almost complete.
 Add indexing.
 
 sfml + sfgui
+
+Idea: Compile svg to C++
+Read svg file with embedded c++ 'script' tags.
+Convert every drawing operation to code to perform that operation.
+Use sfml to implement subset of smil that exists in svg.
+C++ script tags are copied inline. API based on svg uDOM
+
