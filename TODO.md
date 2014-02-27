@@ -18,8 +18,9 @@ build CLI versions of the cmake, source, & index libs
  - can start to self host even without the gui.
 
 Need to implement source manager
- * Creates source file(s) from templates
- * Manages licensing
+Creates source file(s) from templates
+Manages licensing
+
 
     ${project_name} ${project_summary}
     ${license}
@@ -30,11 +31,11 @@ Need to implement source manager
      *  Created on: ${datetime}
      *      Author: ${user}
      */
-    
     #ifndef ${include_guard}
     #define ${include_guard}
     
     #endif
+
 
 License generator
  * Need license list
@@ -83,4 +84,14 @@ cxxide functions and what is required from clang
 User Interface
 =============
 
-signals as callbacks
+CLI interface almost complete.
+Add indexing.
+
+sfml + sfgui
+
+Idea: Compile svg to C++
+Read svg file with embedded c++ 'script' tags.
+Convert every drawing operation to code to perform that operation.
+Use sfml to implement subset of smil that exists in svg.
+C++ script tags are copied inline. API based on svg uDOM
+
