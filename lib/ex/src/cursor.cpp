@@ -25,8 +25,7 @@
 #include "cursor.h"
 #include <tuple>
 
-namespace
-{
+namespace {
 
 auto to_tuple(const cursor& c) -> decltype(std::tie(c.line, c.column)) {
 	return std::tie(c.line, c.column);
