@@ -27,9 +27,15 @@
 #include <string>
 #include <vector>
 
+namespace ex {
+
 struct buffer {
     std::string name;
     std::vector<std::string> lines;
 };
+
+buffer buffer_read(const std::string& file);
+
+}
 
 #endif /* BUFFER_H_ */

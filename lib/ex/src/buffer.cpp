@@ -23,3 +23,21 @@
  */
 
 #include "buffer.h"
+#include <fstream>
+
+namespace ex {
+
+buffer buffer_read(const std::string& file) {
+    buffer b;
+    b.name = file;
+    std::ifstream is(file);
+    is.exceptions(std::ios_base::failbit);
+
+    std::string line;
+    while(std::getline(is, line)) {
+        b.lines.push_back(std::move(line));
+    }
+    return b;
+}
+
+}
