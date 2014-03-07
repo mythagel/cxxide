@@ -1,16 +1,16 @@
-/* 
+/*
  * Copyright (C) 2013  Nicholas Gill
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,10 +49,10 @@ private:
     std::reference_wrapper<config::file_t> file;
 public:
     file_t(config::configuration_t& configuration, config::directory_t& directory, config::file_t& file);
-    
+
     std::vector<std::string> definitions() const;
     void definitions(const std::vector<std::string>& defs);
-    
+
     std::string compile_flags() const;
     void compile_flags(const std::string& flags);
 };
@@ -161,7 +161,7 @@ friend project_t open(const boost::filesystem::path& source_path, const boost::f
 private:
     boost::filesystem::path source_path;
     boost::filesystem::path build_path;
-    
+
     config::configuration_t configuration;
 public:
 
