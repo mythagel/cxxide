@@ -350,7 +350,7 @@ README.md
 > pwd
 src
 > mktarget --type executable test
-> 
+>
 
 source create header blah [--lang c++/c]
 source create source blah [--lang c++/c]
@@ -365,12 +365,12 @@ struct command
 {
     std::string name;
     po::options_description options;
-    
+
     command(const std::string& name)
      : name(name), options(name + " options")
     {
     }
-    
+
     virtual std::vector<std::string> completion(const std::vector<std::string>& args) =0;
     virtual void execute(const std::vector<std::string>& args) =0;
     virtual ~command()
@@ -391,7 +391,7 @@ struct mkdir : command
         ;
         p.add("name", -1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>&) override
     {
         return {};
@@ -418,7 +418,7 @@ struct mkdir : command
 
         global.project->write_config();
     }
-    
+
     virtual ~mkdir()
     {
     }
@@ -701,7 +701,7 @@ struct cd : command
         ;
         p.add("path", 1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
         if(args.size() > 1) return {};
@@ -771,7 +771,7 @@ struct cd : command
 
         current_path(path);
     }
-    
+
     virtual ~cd()
     {
     }
@@ -786,7 +786,7 @@ struct pwd : command
             ("help", "display this help and exit")
         ;
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>&) override
     {
         return {};
@@ -806,7 +806,7 @@ struct pwd : command
 
         std::cout << make_relative(global.project->root(), fs::current_path()).native() << "\n";
     }
-    
+
     virtual ~pwd()
     {
     }
@@ -825,7 +825,7 @@ struct ls : command
         ;
         p.add("path", 1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
         if(args.size() > 1) return {};
@@ -834,7 +834,7 @@ struct ls : command
         fs::path path;
         if(!args.empty())
             path = global.project->root() / args[0];
-        else 
+        else
             path = fs::current_path();
 
         if(exists(path) && !is_child_of(canonical(absolute(path)), global.project->root()))
@@ -983,7 +983,7 @@ struct ls : command
             std::cerr << e.what() << "\n";
         }
     }
-    
+
     virtual ~ls()
     {
     }
@@ -1013,7 +1013,7 @@ struct mktarget : command
         ;
         p.add("name", 1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>&) override
     {
         return {};
@@ -1157,7 +1157,7 @@ struct rmtarget : command
         ;
         p.add("name", 1);
     }
-    
+
     std::vector<std::string> completion(const std::vector<std::string>& args) override
     {
         if(args.size() > 1) return {};
@@ -1211,7 +1211,7 @@ struct rmtarget : command
 
         global.project->write_config();
     }
-    
+
     virtual ~rmtarget()
     {
     }
@@ -1223,7 +1223,7 @@ void completion(const char* raw, linenoiseCompletions* lc)
 try
 {
     std::string buffer = raw;
-    
+
     if(buffer.empty())
     {
         // list out top level commands.
@@ -1246,7 +1246,7 @@ try
             auto opts = cmd->completion(cmd_args);
             for(auto opt : opts)
             {
-                opt = args[0] + " " + opt; 
+                opt = args[0] + " " + opt;
                 linenoiseAddCompletion(lc, opt.c_str());
             }
         }
@@ -1296,7 +1296,7 @@ int main(int argc, char* argv[])
         {
             auto name = vm["create"].as<std::string>();
             project::create(name, path, build_path);
-            
+
             path /= name;
             if(vm.count("build-path"))
                 build_path /= name;
@@ -1337,7 +1337,7 @@ int main(int argc, char* argv[])
 
                         auto cmd_args = args;
                         cmd_args.erase(cmd_args.begin());
-                        
+
                         try
                         {
                             cmd->execute(cmd_args);
@@ -1349,7 +1349,7 @@ int main(int argc, char* argv[])
                         command_found = true;
                     }
                 }
-                
+
                 if(!command_found)
                     std::cout << "error: Unrecognised command.\n";
             }
